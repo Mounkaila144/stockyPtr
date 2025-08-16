@@ -10,14 +10,7 @@
             <b-card class="mt-3">
               <b-row>
 
-                <b-modal hide-footer id="open_scan" size="md" title="Barcode Scanner">
-                  <qrcode-scanner
-                    :qrbox="250" 
-                    :fps="10" 
-                    style="width: 100%; height: calc(100vh - 56px);"
-                    @result="onScan"
-                  />
-                </b-modal>
+
 
                 <!-- Name -->
                 <b-col md="6" class="mb-2">
@@ -56,8 +49,8 @@
               </b-col>
 
 
-                <!-- Barcode Symbology  -->
-                <b-col md="6" class="mb-2">
+                <!-- Barcode Symbology field hidden with CODE128 as default -->
+                <b-col md="6" class="mb-2 d-none">
                   <validation-provider name="Barcode Symbology" :rules="{ required: true}">
                     <b-form-group
                       slot-scope="{ valid, errors }"
@@ -83,41 +76,21 @@
                   </validation-provider>
                 </b-col>
 
-                <!-- Code Product"-->
-                <b-col md="6" class="mb-2">
+                <!-- Code Product field hidden (keeps existing value for editing) -->
+                <b-col md="6" class="mb-2 d-none">
                   <validation-provider name="Code Product" :rules="{ required: true}">
                     <b-form-group
                       slot-scope="{ valid, errors }"
                       :label="$t('CodeProduct') + ' ' + '*'"
                     >
-                      <div class="input-group">
-                         <!-- Input group prepend -->
-                         <div class="input-group-prepend">
-                          <img src="/assets_setup/scan.png" alt="Scan" class="scan-icon" @click="showModal">
-                        </div>
-                        <b-form-input
-                          :class="{'is-invalid': !!errors.length}"
-                          :state="errors[0] ? false : (valid ? true : null)"
-                          aria-describedby="CodeProduct-feedback"
-                          type="text"
-                          v-model="product.code"
-                        ></b-form-input>
-                        <div class="input-group-append">
-                          <span class="input-group-text">
-                            <a @click="generateNumber()">
-                              <i class="i-Bar-Code cursor-pointer"></i>
-                            </a>
-                          </span>
-                        </div>
-                        <b-form-invalid-feedback id="CodeProduct-feedback">{{ errors[0] }}</b-form-invalid-feedback>
-                      </div>
-                      <span>{{$t('Scan_your_barcode_and_select_the_correct_symbology_below')}}</span>
-                      <b-alert
-                        show
-                        variant="danger"
-                        class="error mt-1"
-                        v-if="code_exist !=''"
-                      >{{code_exist}}</b-alert>
+                      <b-form-input
+                        :class="{'is-invalid': !!errors.length}"
+                        :state="errors[0] ? false : (valid ? true : null)"
+                        aria-describedby="CodeProduct-feedback"
+                        type="text"
+                        v-model="product.code"
+                      ></b-form-input>
+                      <b-form-invalid-feedback id="CodeProduct-feedback">{{ errors[0] }}</b-form-invalid-feedback>
                     </b-form-group>
                   </validation-provider>
                 </b-col>
@@ -129,14 +102,27 @@
                       slot-scope="{ valid, errors }"
                       :label="$t('Categorie') + ' ' + '*'"
                     >
-                      <v-select
-                        :class="{'is-invalid': !!errors.length}"
-                        :state="errors[0] ? false : (valid ? true : null)"
-                        :reduce="label => label.value"
-                        :placeholder="$t('Choose_Category')"
-                        v-model="product.category_id"
-                        :options="categories.map(categories => ({label: categories.name, value: categories.id}))"
-                      />
+                      <div class="d-flex">
+                        <v-select
+                          :class="{'is-invalid': !!errors.length}"
+                          :state="errors[0] ? false : (valid ? true : null)"
+                          :reduce="label => label.value"
+                          :placeholder="$t('Choose_Category')"
+                          v-model="product.category_id"
+                          :options="categories.map(categories => ({label: categories.name, value: categories.id}))"
+                          style="flex: 1;"
+                        />
+                        <b-button
+                          @click="New_Category()"
+                          variant="primary"
+                          size="sm"
+                          class="ml-2"
+                          style="height: 38px; min-width: 40px;"
+                          title="Ajouter une nouvelle catégorie"
+                        >
+                          <i class="i-Add"></i>
+                        </b-button>
+                      </div>
                       <b-form-invalid-feedback>{{ errors[0] }}</b-form-invalid-feedback>
                     </b-form-group>
                   </validation-provider>
@@ -268,7 +254,7 @@
                                 <td class="text-right">{{currentUser.currency}} {{formatNumber(materiel.cost * materiel.quantity, 2)}}</td>
 
                                 <td class="text-right">
-                                  
+
                                     <a
                                       style="color: #ffff;"
                                       @click="delete_materiel(materiel.product_id)"
@@ -301,10 +287,10 @@
 
             <b-card class="mt-3">
               <b-row>
-              
-                 <!-- type -->
 
-                <b-col md="6" class="mb-2" v-if="product.type == 'is_single'">
+                 <!-- type fields hidden -->
+
+                <b-col md="6" class="mb-2 d-none" v-if="product.type == 'is_single'">
                   <b-form-group :label="$t('type')">
                     <b-form-input
                       label="Product Type"
@@ -314,7 +300,7 @@
                   </b-form-group>
                 </b-col>
 
-                <b-col md="6" class="mb-2" v-if="product.type == 'is_combo'">
+                <b-col md="6" class="mb-2 d-none" v-if="product.type == 'is_combo'">
                   <b-form-group :label="$t('type')">
                     <b-form-input
                       label="Product Type"
@@ -324,7 +310,7 @@
                   </b-form-group>
                 </b-col>
 
-               <b-col md="6" class="mb-2" v-else-if="product.type == 'is_service'">
+               <b-col md="6" class="mb-2 d-none" v-else-if="product.type == 'is_service'">
                   <b-form-group :label="$t('type')">
                     <b-form-input
                       label="Product Type"
@@ -334,7 +320,7 @@
                   </b-form-group>
                 </b-col>
 
-                <b-col md="6" class="mb-2" v-else-if="product.type == 'is_variant'">
+                <b-col md="6" class="mb-2 d-none" v-else-if="product.type == 'is_variant'">
                   <b-form-group :label="$t('type')">
                     <b-form-input
                       label="Product Type"
@@ -400,17 +386,30 @@
                       slot-scope="{ valid, errors }"
                       :label="$t('UnitProduct') + ' ' + '*'"
                     >
-                      <v-select
-                        :class="{'is-invalid': !!errors.length}"
-                        :state="errors[0] ? false : (valid ? true : null)"
-                        v-model="product.unit_id"
-                        class="required"
-                        required
-                        @input="Selected_Unit"
-                        :placeholder="$t('Choose_Unit_Product')"
-                        :reduce="label => label.value"
-                        :options="units.map(units => ({label: units.name, value: units.id}))"
-                      />
+                      <div class="d-flex">
+                        <v-select
+                          :class="{'is-invalid': !!errors.length}"
+                          :state="errors[0] ? false : (valid ? true : null)"
+                          v-model="product.unit_id"
+                          class="required"
+                          required
+                          @input="Selected_Unit"
+                          :placeholder="$t('Choose_Unit_Product')"
+                          :reduce="label => label.value"
+                          :options="units.map(units => ({label: units.name, value: units.id}))"
+                          style="flex: 1;"
+                        />
+                        <b-button
+                          @click="New_Unit()"
+                          variant="primary"
+                          size="sm"
+                          class="ml-2"
+                          style="height: 38px; min-width: 40px;"
+                          title="Ajouter une nouvelle unité"
+                        >
+                          <i class="i-Add"></i>
+                        </b-button>
+                      </div>
                       <b-form-invalid-feedback>{{ errors[0] }}</b-form-invalid-feedback>
                     </b-form-group>
                   </validation-provider>
@@ -549,7 +548,7 @@
                 <!-- Warranty & Guarantee Tracking -->
                 <!-- Warranty Period + Unit -->
                 <b-col md="6" class="mb-2">
-                 
+
                     <b-form-group :label="$t('Warranty_Period')">
                       <b-input-group>
                         <b-form-input
@@ -565,7 +564,7 @@
                           ]"
                         ></b-form-select>
                       </b-input-group>
-                    
+
                     </b-form-group>
                 </b-col>
 
@@ -596,7 +595,7 @@
 
                 <!-- Guarantee Period + Unit -->
                 <b-col md="6" class="mb-2" v-if="product.has_guarantee">
-                 
+
                     <b-form-group :label="$t('Guarantee_Period')">
                       <b-input-group>
                         <b-form-input
@@ -617,7 +616,7 @@
 
               </b-row>
             </b-card>
-           
+
             <b-card class="mt-3">
               <b-row>
                 <!-- Product_Has_Imei_Serial_number -->
@@ -657,6 +656,168 @@
           </b-col>
         </b-row>
       </b-form>
+    </validation-observer>
+
+    <!-- Modal for Creating New Category -->
+    <validation-observer ref="Create_Category">
+      <b-modal hide-footer size="md" id="New_Category" :title="$t('Add') + ' ' + $t('Categorie')">
+        <b-form @submit.prevent="Submit_Category">
+          <b-row>
+            <!-- Code category -->
+            <b-col md="12">
+              <validation-provider
+                name="Code category"
+                :rules="{ required: true}"
+                v-slot="validationContext"
+              >
+                <b-form-group :label="$t('Codecategorie') + ' ' + '*'">
+                  <b-form-input
+                    :placeholder="$t('Enter_Code_category')"
+                    :state="getValidationState(validationContext)"
+                    aria-describedby="Code-feedback"
+                    label="Code"
+                    v-model="newCategory.code"
+                  ></b-form-input>
+                  <b-form-invalid-feedback id="Code-feedback">{{ validationContext.errors[0] }}</b-form-invalid-feedback>
+                </b-form-group>
+              </validation-provider>
+            </b-col>
+
+            <!-- Name category -->
+            <b-col md="12">
+              <validation-provider
+                name="Name category"
+                :rules="{ required: true}"
+                v-slot="validationContext"
+              >
+                <b-form-group :label="$t('Namecategorie') + ' ' + '*'">
+                  <b-form-input
+                    :placeholder="$t('Enter_name_category')"
+                    :state="getValidationState(validationContext)"
+                    aria-describedby="Name-feedback"
+                    label="Name"
+                    v-model="newCategory.name"
+                  ></b-form-input>
+                  <b-form-invalid-feedback id="Name-feedback">{{ validationContext.errors[0] }}</b-form-invalid-feedback>
+                </b-form-group>
+              </validation-provider>
+            </b-col>
+
+             <b-col md="12" class="mt-3">
+                <b-button variant="primary" type="submit"  :disabled="CategorySubmitProcessing"><i class="i-Yes me-2 font-weight-bold"></i> {{$t('submit')}}</b-button>
+                  <div v-once class="typo__p" v-if="CategorySubmitProcessing">
+                    <div class="spinner sm spinner-primary mt-3"></div>
+                  </div>
+            </b-col>
+
+          </b-row>
+        </b-form>
+      </b-modal>
+    </validation-observer>
+
+    <!-- Modal for Creating New Unit -->
+    <validation-observer ref="Create_Unit">
+      <b-modal hide-footer size="md" id="New_Unit" :title="$t('Add') + ' ' + $t('Units')">
+        <b-form @submit.prevent="Submit_Unit">
+          <b-row>
+            <!-- Name -->
+            <b-col md="12">
+              <validation-provider
+                name="Name"
+                :rules="{ required: true , max:15}"
+                v-slot="validationContext"
+              >
+                <b-form-group :label="$t('Name') + ' ' + '*'">
+                  <b-form-input
+                    :placeholder="$t('Enter_Name_Unit')"
+                    :state="getValidationState(validationContext)"
+                    aria-describedby="Name-feedback"
+                    label="Name"
+                    v-model="newUnit.name"
+                  ></b-form-input>
+                  <b-form-invalid-feedback id="Name-feedback">{{ validationContext.errors[0] }}</b-form-invalid-feedback>
+                </b-form-group>
+              </validation-provider>
+            </b-col>
+
+            <!-- ShortName -->
+            <b-col md="12">
+              <validation-provider
+                name="ShortName"
+                :rules="{ required: true , max:15}"
+                v-slot="validationContext"
+              >
+                <b-form-group :label="$t('ShortName') + ' ' + '*'">
+                  <b-form-input
+                    :placeholder="$t('Enter_ShortName_Unit')"
+                    :state="getValidationState(validationContext)"
+                    aria-describedby="ShortName-feedback"
+                    label="ShortName"
+                    v-model="newUnit.ShortName"
+                  ></b-form-input>
+                  <b-form-invalid-feedback id="ShortName-feedback">{{ validationContext.errors[0] }}</b-form-invalid-feedback>
+                </b-form-group>
+              </validation-provider>
+            </b-col>
+
+            <!-- Base unit -->
+            <b-col md="12">
+              <b-form-group :label="$t('BaseUnit')">
+                <v-select
+                  @input="Selected_Base_Unit"
+                  v-model="newUnit.base_unit"
+                  :reduce="label => label.value"
+                  :placeholder="$t('Choose_Base_Unit')"
+                  :options="units_base.map(units_base => ({label: units_base.name, value: units_base.id}))"
+                />
+              </b-form-group>
+            </b-col>
+
+            <!-- operator -->
+            <b-col md="12" v-show="show_operator">
+              <b-form-group :label="$t('Operator')">
+                <v-select
+                  v-model="newUnit.operator"
+                  :reduce="label => label.value"
+                  :placeholder="$t('Choose_Operator')"
+                  :options="[
+                    {label: 'Multiply (*)', value: '*'},
+                    {label: 'Divide (/)', value: '/'}
+                  ]"
+                ></v-select>
+              </b-form-group>
+            </b-col>
+
+            <!-- Operation Value -->
+            <b-col md="12" v-show="show_operator">
+              <validation-provider
+                name="Operation Value"
+                :rules="{ required: true , regex: /^\d*\.?\d*$/}"
+                v-slot="validationContext"
+              >
+                <b-form-group :label="$t('OperationValue') + ' ' + '*'">
+                  <b-form-input
+                    :placeholder="$t('Enter_Operation_Value')"
+                    :state="getValidationState(validationContext)"
+                    aria-describedby="Operation-feedback"
+                    label="Operation"
+                    v-model="newUnit.operator_value"
+                  ></b-form-input>
+                  <b-form-invalid-feedback id="Operation-feedback">{{ validationContext.errors[0] }}</b-form-invalid-feedback>
+                </b-form-group>
+              </validation-provider>
+            </b-col>
+
+             <b-col md="12" class="mt-3">
+                <b-button variant="primary" type="submit"  :disabled="UnitSubmitProcessing"><i class="i-Yes me-2 font-weight-bold"></i> {{$t('submit')}}</b-button>
+                  <div v-once class="typo__p" v-if="UnitSubmitProcessing">
+                    <div class="spinner sm spinner-primary mt-3"></div>
+                  </div>
+            </b-col>
+
+          </b-row>
+        </b-form>
+      </b-modal>
     </validation-observer>
   </div>
 </template>
@@ -712,7 +873,22 @@ export default {
         is_imei: false,
         not_selling: false,
       },
-      code_exist: ""
+      code_exist: "",
+      CategorySubmitProcessing: false,
+      newCategory: {
+        name: "",
+        code: ""
+      },
+      UnitSubmitProcessing: false,
+      show_operator: false,
+      units_base: [],
+      newUnit: {
+        name: "",
+        ShortName: "",
+        base_unit: "",
+        operator: "*",
+        operator_value: 1
+      }
     };
   },
 
@@ -815,7 +991,7 @@ export default {
             this.materiels.some(detail => detail.code === result.code)
         ) {
             toastr.error('Product_Already_added');
-            
+
         } else {
 
             var materiel_tag = {
@@ -827,7 +1003,7 @@ export default {
                 quantity:1,
             }
             this.materiels.push(materiel_tag);
-            
+
         }
         this.search_input= '';
         this.$refs.product_autocomplete.value = "";
@@ -846,16 +1022,7 @@ export default {
     },
 
 
-    showModal() {
-      this.$bvModal.show('open_scan');
-      
-    },
 
-    onScan (decodedText, decodedResult) {
-      const code = decodedText;
-      this.product.code = code;
-      this.$bvModal.hide('open_scan');
-    },
 
 
      //------ Generate code
@@ -867,7 +1034,7 @@ export default {
             (Math.pow(10, 8) - Math.pow(10, 7) - 1)
       );
     },
-    
+
     //------------- Submit Validation Update Product
     Submit_Product() {
       this.$refs.Edit_Product.validate().then(success => {
@@ -927,7 +1094,7 @@ export default {
               "Please Enter the Variant",
               this.$t("Warning")
             );
-            
+
           }
       }
     },
@@ -959,6 +1126,9 @@ export default {
               this.materiels = response.data.materiels;
           }
 
+          // Set default values for empty fields
+          this.setDefaultValues();
+
           this.isLoading = false;
         })
         .catch(response => {
@@ -968,11 +1138,51 @@ export default {
         });
     },
 
+    //------------- Set Default Values for Empty Select Fields
+    setDefaultValues() {
+      // Set default category only if empty
+      if (this.categories.length > 0 && (!this.product.category_id || this.product.category_id === "")) {
+        this.product.category_id = this.categories[0].id;
+      }
+
+      // Set default brand only if empty
+      if (this.brands.length > 0 && (!this.product.brand_id || this.product.brand_id === "")) {
+        this.product.brand_id = this.brands[0].id;
+      }
+
+      // Set default unit only if empty
+      if (this.units.length > 0 && (!this.product.unit_id || this.product.unit_id === "")) {
+        this.product.unit_id = this.units[0].id;
+        // Load sub units for the selected unit
+        this.Selected_Unit(this.product.unit_id);
+      } else if (this.product.unit_id) {
+        // If unit exists, load its sub units and set defaults for sale/purchase if empty
+        this.Selected_Unit(this.product.unit_id);
+      }
+    },
+
+    //------------- Set Default Sale and Purchase Units (called after sub units are loaded)
+    setDefaultSubUnits() {
+      // Set default sale unit only if empty
+      if (this.units_sub.length > 0 && (!this.product.unit_sale_id || this.product.unit_sale_id === "")) {
+        this.product.unit_sale_id = this.units_sub[0].id;
+      }
+
+      // Set default purchase unit only if empty
+      if (this.units_sub.length > 0 && (!this.product.unit_purchase_id || this.product.unit_purchase_id === "")) {
+        this.product.unit_purchase_id = this.units_sub[0].id;
+      }
+    },
+
     //---------------------- Get Sub Units with Unit id ------------------------------\\
     Get_Units_SubBase(value) {
       axios
         .get("get_sub_units_by_base?id=" + value)
-        .then(({ data }) => (this.units_sub = data));
+        .then(({ data }) => {
+          this.units_sub = data;
+          // Set default sub units after loading (only for empty fields)
+          this.setDefaultSubUnits();
+        });
     },
 
     //---------------------- Event Select Unit Product ------------------------------\\
@@ -985,7 +1195,7 @@ export default {
 
     //------------------------------ Update Product ------------------------------\\
     Update_Product() {
-      
+
       NProgress.start();
       NProgress.set(0.1);
       var self = this;
@@ -1003,12 +1213,12 @@ export default {
           self.data.append(key, value);
       });
 
-      
+
        // append array variants
        if (self.materiels.length && self.product.type == 'is_combo') {
         self.data.append("materiels", JSON.stringify(self.materiels));
       }
-                
+
       //append array variants
       if (self.variants.length) {
           for (var i = 0; i < self.variants.length; i++) {
@@ -1045,6 +1255,177 @@ export default {
             }else{
               this.makeToast("danger", this.$t("InvalidData"), this.$t("Failed"));
             }
+        });
+    },
+
+    //------------------------------ Modal (create category) -------------------------------\\
+    New_Category() {
+      this.reset_Category_Form();
+      this.$bvModal.show("New_Category");
+    },
+
+    //--------------------------- reset Category Form ----------------\\
+    reset_Category_Form() {
+      this.newCategory = {
+        name: "",
+        code: ""
+      };
+    },
+
+    //------------- Submit Validation Create Category
+    Submit_Category() {
+      this.$refs.Create_Category.validate().then(success => {
+        if (!success) {
+          this.makeToast(
+            "danger",
+            this.$t("Please_fill_the_form_correctly"),
+            this.$t("Failed")
+          );
+        } else {
+          this.Create_Category();
+        }
+      });
+    },
+
+    //----------------------------------Create new Category ----------------\\
+    Create_Category() {
+      this.CategorySubmitProcessing = true;
+      axios
+        .post("categories", {
+          name: this.newCategory.name,
+          code: this.newCategory.code
+        })
+        .then(response => {
+          this.CategorySubmitProcessing = false;
+          // Ajouter la nouvelle catégorie à la liste locale
+          const newCat = {
+            id: response.data.id || Date.now(), // Utiliser un ID temporaire si non fourni
+            name: this.newCategory.name,
+            code: this.newCategory.code
+          };
+          this.categories.push(newCat);
+
+          // Sélectionner automatiquement la nouvelle catégorie
+          this.product.category_id = newCat.id;
+
+          // Fermer la modal
+          this.$bvModal.hide("New_Category");
+
+          this.makeToast(
+            "success",
+            this.$t("Successfully_Created"),
+            this.$t("Success")
+          );
+        })
+        .catch(error => {
+          this.CategorySubmitProcessing = false;
+          this.makeToast("danger", this.$t("InvalidData"), this.$t("Failed"));
+        });
+    },
+
+    //------------------------------ Modal (create unit) -------------------------------\\
+    New_Unit() {
+      this.reset_Unit_Form();
+      this.show_operator = false;
+      this.Get_Units_Base();
+      this.$bvModal.show("New_Unit");
+    },
+
+    //--------------------------- reset Unit Form ----------------\\
+    reset_Unit_Form() {
+      this.newUnit = {
+        name: "",
+        ShortName: "",
+        base_unit: "",
+        operator: "*",
+        operator_value: 1
+      };
+    },
+
+    //------------- Submit Validation Create Unit
+    Submit_Unit() {
+      this.$refs.Create_Unit.validate().then(success => {
+        if (!success) {
+          this.makeToast(
+            "danger",
+            this.$t("Please_fill_the_form_correctly"),
+            this.$t("Failed")
+          );
+        } else {
+          this.Create_Unit();
+        }
+      });
+    },
+
+    Selected_Base_Unit(value) {
+      if (value == null) {
+        this.show_operator = false;
+      } else {
+        this.show_operator = true;
+      }
+    },
+
+    //----------------------------------Create new Unit ----------------\\
+    Create_Unit() {
+      this.UnitSubmitProcessing = true;
+
+      let base_unit = this.newUnit.base_unit;
+      let operator = this.newUnit.operator;
+      let operator_value = this.newUnit.operator_value;
+
+      if (base_unit === '' || base_unit === null) {
+        operator = '*';
+        operator_value = 1;
+      }
+
+      axios
+        .post("units", {
+          name: this.newUnit.name,
+          ShortName: this.newUnit.ShortName,
+          base_unit: base_unit,
+          operator: operator,
+          operator_value: operator_value
+        })
+        .then(response => {
+          this.UnitSubmitProcessing = false;
+          // Ajouter la nouvelle unité à la liste locale
+          const newUnitData = {
+            id: response.data.id || Date.now(), // Utiliser un ID temporaire si non fourni
+            name: this.newUnit.name,
+            ShortName: this.newUnit.ShortName
+          };
+          this.units.push(newUnitData);
+
+          // Sélectionner automatiquement la nouvelle unité
+          this.product.unit_id = newUnitData.id;
+
+          // Mettre à jour les unités de vente et d'achat
+          this.Selected_Unit(newUnitData.id);
+
+          // Fermer la modal
+          this.$bvModal.hide("New_Unit");
+
+          this.makeToast(
+            "success",
+            this.$t("Successfully_Created"),
+            this.$t("Success")
+          );
+        })
+        .catch(error => {
+          this.UnitSubmitProcessing = false;
+          this.makeToast("danger", this.$t("InvalidData"), this.$t("Failed"));
+        });
+    },
+
+    //---------------------- Get Units Base ------------------------------\\
+    Get_Units_Base() {
+      axios
+        .get("units")
+        .then(response => {
+          this.units_base = response.data.Units_base;
+        })
+        .catch(error => {
+          console.log(error);
         });
     }
   }, //end Methods

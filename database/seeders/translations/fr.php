@@ -316,7 +316,7 @@ return [
 'CodeProduct' =>'Code Produit',
 'Categorie' =>'Catégorie',
 'SubCategorie' =>'Sous-catégorie',
-'Name_product' =>'Désignation',
+'Name_product' =>'Nom',
 'StockAlert' =>'Stock Alert',
 'warehouse' =>'Magasin',
 'Tax' =>'Taxe',
@@ -986,5 +986,5 @@ return [
 'Sale_Purchase_Ref' =>'Réf. vente/achat',
 'Reference' =>'Référence',
 
-   
+
 ];

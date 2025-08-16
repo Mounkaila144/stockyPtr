@@ -18,7 +18,7 @@ export default {
     };
   },
   computed: {
-    
+
     ...mapGetters(["getThemeMode","isAuthenticated","show_language","currentUser"]),
     themeName() {
       return this.getThemeMode.dark ? "dark-theme" : " ";
@@ -38,7 +38,7 @@ export default {
   metaInfo() {
     return {
       // if no subcomponents specify a metaInfo.title, this title will be used
-      title: "Stocky",
+      title: "Ptrniger",
       titleTemplate: this.titleTemplate,
 
       bodyAttrs: {
@@ -47,20 +47,20 @@ export default {
       htmlAttrs: {
         dir: this.rtl
       },
-      
+
     };
   },
 methods:{
     ...mapActions([
       "refreshUserPermissions",
     ]),
-    
+
 },
 
  beforeMount() {
         this.refreshUserPermissions();
         setTimeout(() => this.Loading= true, 300);
-   
+
   }
 
 };

@@ -6,16 +6,16 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <link rel="stylesheet" href="/css/master.css">
-    
+
     <link rel="icon" href="{{ asset('images/' . ($app_settings->favicon ?? 'favicon.ico')) }}">
-    <title>{{ $app_settings->app_name ?? 'Stocky | Ultimate Inventory With POS' }}</title>
+    <title>{{ $app_settings->app_name ?? 'Ptrniger | Ultimate Inventory With POS' }}</title>
 
   </head>
 
   <body class="text-left">
     <noscript>
       <strong>
-        We're sorry but Stocky doesn't work properly without JavaScript
+        We're sorry but Ptrniger doesn't work properly without JavaScript
         enabled. Please enable it to continue.</strong
       >
     </noscript>
@@ -44,4 +44,3 @@
   </body>
 </html>
 
-    

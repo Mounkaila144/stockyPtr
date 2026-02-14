@@ -29,6 +29,7 @@ Route::group([
 
 
 Route::post('getAccessToken', 'AuthController@getAccessToken');
+Route::middleware('auth:api')->post('logout', 'AuthController@logout');
 Route::get('/get-logo-setting', function () {
     $setting = \App\Models\Setting::first();
     return response()->json([

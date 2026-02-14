@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\BaseController;
+use App\Http\Controllers\LandingController;
 use Modules\Store\Http\Controllers\StoreController;
 use Laravel\passport\Passport;
 
@@ -102,6 +103,9 @@ if ($installed === false) {
 
 //------------------------------------------------------------------\\
 
+// Landing page - public route (no auth required)
+Route::get('/', [LandingController::class, 'index'])->name('landing');
+
 Route::group(['middleware' => ['web', 'auth:web', 'Is_Active']], function () {
 
     Route::get('/login', function () {
@@ -114,7 +118,7 @@ Route::group(['middleware' => ['web', 'auth:web', 'Is_Active']], function () {
     });
 
 
-    Route::get('/{vue?}',
+    Route::get('/{vue}',
       function () {
         $installed = Storage::disk('public')->exists('installed');
         $ModulesData = BaseController::get_Module_Info();

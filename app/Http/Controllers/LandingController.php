@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Plan;
 
 class LandingController extends Controller
 {
     public function index()
     {
-        $isAuthenticated = Auth::check();
-        return view('landing', compact('isAuthenticated'));
+        $plans = Plan::where('is_active', true)->get();
+        return view('landing', compact('plans'));
     }
 }

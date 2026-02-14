@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class EmployeeProject extends Model
+class EmployeeProject extends BaseModel
 {
    protected $table ="employee_project";
 

@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class OauthRefreshToken extends Model
+class OauthRefreshToken extends BaseModel
 {
 
     public function oauthAccessToken()

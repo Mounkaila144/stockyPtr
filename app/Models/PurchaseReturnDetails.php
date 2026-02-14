@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class PurchaseReturnDetails extends Model
+class PurchaseReturnDetails extends BaseModel
 {
 
     protected $fillable = [

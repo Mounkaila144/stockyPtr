@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Transfer extends Model
+class Transfer extends BaseModel
 {
     protected $table = 'transfers';
     protected $dates = ['deleted_at'];

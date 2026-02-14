@@ -72,7 +72,7 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(){
         $this->registerPolicies();
 
-        // Passport::routes();
-    
+        // Passport utilise la connexion tenant dynamiquement
+        // Les tokens OAuth sont stockes dans la DB de chaque tenant
     }
 }

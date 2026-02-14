@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class EmployeeTask extends Model
+class EmployeeTask extends BaseModel
 {
    protected $table ="employee_task";
 

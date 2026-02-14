@@ -35,7 +35,7 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \App\Http\Middleware\SetSessionConfig::class,
-
+        \App\Http\Middleware\IdentifyTenant::class,
     ];
 
     /**
@@ -87,6 +87,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'Is_Active' => \App\Http\Middleware\Is_Active::class,
         'store.data' => \App\Http\Middleware\StoreDataMiddleware::class,
-
+        'superadmin' => \App\Http\Middleware\SuperAdmin::class,
     ];
 }

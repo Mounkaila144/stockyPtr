@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class PaymentWithCreditCard extends Model
+class PaymentWithCreditCard extends BaseModel
 {
 
     protected $table = 'payment_with_credit_card';

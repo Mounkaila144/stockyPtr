@@ -2,10 +2,7 @@
 
 namespace App\Models;
 
-
-use Illuminate\Database\Eloquent\Model;
-
-class StoreContact extends Model
+class StoreContact extends BaseModel
 {
     protected $table = 'store_contact';
 

@@ -3,9 +3,7 @@
 namespace App\Models;
 use App\Models\PurchaseClientDetail;
 
-use Illuminate\Database\Eloquent\Model;
-
-class PurchaseClientDetail extends Model
+class PurchaseClientDetail extends BaseModel
 {
 
     protected $fillable = [

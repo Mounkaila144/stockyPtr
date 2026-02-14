@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class CountStock extends Model
+class CountStock extends BaseModel
 {
     protected $table = 'count_stock';
 

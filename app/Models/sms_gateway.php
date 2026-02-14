@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class sms_gateway extends Model
+class sms_gateway extends BaseModel
 {
     protected $table = 'sms_gateway';
 

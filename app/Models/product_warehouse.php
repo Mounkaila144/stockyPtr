@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class product_warehouse extends Model
+class product_warehouse extends BaseModel
 {
     protected $table = 'product_warehouse';
 

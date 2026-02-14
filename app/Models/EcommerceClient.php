@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 
-class EcommerceClient extends Model implements Authenticatable
+class EcommerceClient extends BaseModel implements Authenticatable
 {
     use AuthenticatableTrait;
 

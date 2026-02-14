@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class SMSMessage extends Model
+class SMSMessage extends BaseModel
 {
     protected $table = 'sms_messages';
 

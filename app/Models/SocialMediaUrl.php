@@ -2,10 +2,7 @@
 
 namespace App\Models;
 
-
-use Illuminate\Database\Eloquent\Model;
-
-class SocialMediaUrl extends Model
+class SocialMediaUrl extends BaseModel
 {
     protected $dates = ['deleted_at'];
 

@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class EmailMessage extends Model
+class EmailMessage extends BaseModel
 {
     protected $table = 'email_messages';
 

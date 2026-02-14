@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'base_domain' => env('BASE_DOMAIN', 'wuroobiz.ptrniger.com'),
+
     'asset_url' => env('ASSET_URL', null),
 
     /*

@@ -9,6 +9,8 @@ use Laravel\Passport\HasApiTokens;
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable;
+
+    protected $connection = 'tenant';
     protected $dates = ['deleted_at'];
 
     /**

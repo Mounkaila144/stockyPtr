@@ -4,195 +4,112 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Stocky is a comprehensive Laravel-based inventory management system with POS (Point of Sale) capabilities. It's built as a modular application using Laravel 10+ with Vue.js frontend and includes extensive features for inventory tracking, sales management, accounting, HR management, and reporting.
-
-## Architecture & Structure
-
-### Core Framework
-- **Backend**: Laravel 10+ (PHP 8.1+)
-- **Frontend**: Vue.js 2.6+ with Vue Router
-- **Authentication**: Laravel Passport (OAuth2)
-- **Database**: MySQL with Eloquent ORM
-- **Build System**: Laravel Mix with Webpack
-- **Module System**: Uses nwidart/laravel-modules for modular architecture
-
-### Key Directory Structure
-- `app/Http/Controllers/` - Main application controllers (50+ controllers for different modules)
-- `app/Models/` - Eloquent models representing database entities
-- `app/Policies/` - Authorization policies for all major resources
-- `Modules/` - Modular extensions (currently empty but configured)
-- `resources/src/` - Vue.js application source
-- `public/js/bundle/` - Compiled Vue.js components and chunks
-- `database/migrations/` - Extensive migration history (200+ migrations)
-- `database/seeders/` - Database seeders with multilingual support
-
-### Key Models & Business Logic
-The application centers around these core entities:
-- **Products** - With variants, warehouses, units, brands, and categories
-- **Sales & Purchases** - Complete transaction lifecycle with returns
-- **Inventory** - Multi-warehouse stock management with transfers and adjustments
-- **Clients & Providers** - Customer and supplier management
-- **Accounting** - Accounts, deposits, expenses, payment methods
-- **HR** - Employees, attendance, payroll, projects, and tasks
-- **Reporting** - Comprehensive reporting across all modules
+Stocky is a Laravel 10+ inventory management system with POS capabilities. The backend is a pure REST API consumed by a decoupled Vue.js 2.6 SPA frontend. It covers inventory, sales, purchasing, accounting, HR, and reporting.
 
 ## Development Commands
 
-### Backend (Laravel/PHP)
 ```bash
-# Install PHP dependencies
+# Backend
 composer install
-
-# Run database migrations
 php artisan migrate
-
-# Seed the database
 php artisan db:seed
-
-# Run tests
-./vendor/bin/phpunit
-
-# Generate application key
-php artisan key:generate
-
-# Install Laravel Passport
 php artisan passport:install
 
-# Clear application cache
-php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
-```
+# Run all tests (uses SQLite in-memory)
+./vendor/bin/phpunit
 
-### Frontend (Vue.js/Node.js)
-```bash
-# Install Node.js dependencies
+# Run a single test file
+./vendor/bin/phpunit tests/Feature/ExampleTest.php
+
+# Run a single test method
+./vendor/bin/phpunit --filter test_method_name
+
+# Clear caches (often needed after config/route changes)
+php artisan config:clear && php artisan cache:clear && php artisan route:clear
+
+# Frontend
 npm install
-
-# Development build with watching
-npm run dev
-npm run watch
-
-# Production build
-npm run production
-
-# Hot module replacement
-npm run hot
+npm run dev          # development build
+npm run watch        # dev build with file watching
+npm run production   # production build (minified, hashed chunks)
 ```
 
-### Database Operations
-```bash
-# Create new migration
-php artisan make:migration create_table_name
+## Architecture
 
-# Create model with migration
-php artisan make:model ModelName -m
+### API-First Design
+- Backend serves only JSON via REST API (`routes/api.php`, 600+ lines)
+- Frontend is a Vue.js SPA that consumes the API
+- Web routes (`routes/web.php`) serve: setup wizard at `/setup`, landing page at `/`, and a catch-all `/{vue}` route for the SPA
 
-# Run specific migration
-php artisan migrate --path=/database/migrations/specific_migration.php
+### Authentication & Authorization
+- **Laravel Passport** (OAuth2) for API auth — tokens via `auth:api` middleware
+- **`Is_Active` middleware** (`app/Http/Middleware/Is_Active.php`) — checks `user.statut` field; applied to all protected routes alongside `auth:api`
+- **Policy-based authorization** — every controller action calls `$this->authorizeForUser($request->user('api'), 'action', Model::class)`
+- Policies check permissions via `Permission` model + `Role` many-to-many. Permission names follow pattern: `{resource}_{action}` (e.g., `products_view`, `sales_add`)
+- User role system: `User` → many-to-many → `Role` → many-to-many → `Permission`
 
-# Rollback migrations
-php artisan migrate:rollback
-```
+### Controller Patterns
+All controllers extend `BaseController` (`app/Http/Controllers/BaseController.php`):
+- `sendResponse($result, $msg)` → `{ success: true, message, data }` (200)
+- `sendError($error_msg, $error)` → `{ success: false, message, errors }` (400)
+- `Set_config_mail()` — dynamically sets mail config from `servers` table
+- `get_Module_Info()` — retrieves installed/enabled `nwidart/laravel-modules`
 
-## Application Setup & Installation
+Common controller patterns:
+- Authorization check at start of every method
+- `helpers` class (`app/utils/helpers.php`) for filtering (`filter()`) and role-based record visibility (`Show_Records()`)
+- Pagination with configurable `perPage` (supports `-1` for all results)
+- Eager loading to prevent N+1 queries
+- Bulk delete via `delete_by_selection` methods
+- Notifications via Twilio/Nexmo/Infobip (SMS), email, WhatsApp
+- PDF generation via `barryvdh/laravel-dompdf` with Arabic support (`ArPHP`)
 
-The application includes a setup wizard accessible at `/setup` when not installed. The setup process:
-1. Checks server requirements
-2. Validates database connection
-3. Runs migrations and seeders
-4. Creates admin user
-5. Sets up basic configuration
+### Model Patterns
+- All models use **soft deletes** (`deleted_at`)
+- Explicit `$fillable` arrays for mass assignment protection
+- Type casting via `$casts` (doubles for financial fields, booleans for flags)
+- Product types: `is_single`, `is_combo`, `is_variant`
+- Stock tracked via `product_warehouse` pivot table
 
-Setup-related files:
-- `SetupController.php` - Handles installation wizard
-- `TestDbController.php` - Database connection testing
-- `check_permissions.php` - Server requirements checking
+### Frontend (Vue.js SPA)
+- **Entry points**: `resources/src/main.js` (app) and `resources/src/login.js` (login page)
+- **Build output**: `public/js/main.min.js`, `public/js/login.min.js`, chunks in `public/js/bundle/`
+- **Router**: `resources/src/router.js` — history mode, all routes lazy-loaded via dynamic imports with named chunks
+- **Store**: Vuex at `resources/src/store/` — modules: `auth` (permissions, user, notifications), `language` (persisted to localStorage + backend sync), `largeSidebar`, `compactSidebar`, `config`
+- **Axios**: base URL `/api/`, credentials enabled. Interceptors redirect on 401→`/login`, 403→`/not_authorize`, 404→`/NotFound`
+- **Global event bus**: `window.Fire = new Vue()`
+- **i18n**: Translations loaded from `/api/translations/{locale}` at boot, stored in database `translations` table
 
-## Key Features & Modules
+### Route Organization (API)
+- Unauthenticated: password reset, login (`getAccessToken`), logo/settings, translations, languages
+- Authenticated (`auth:api` + `Is_Active`): everything else
+- Heavy use of `Route::resource()` for CRUD
+- Prefixes: `report/*` (40+ report routes), `hrm/*`, `returns/sale/*`, `returns/purchase/*`, `payment/*`
+- PDF routes are public (outside auth): `sale_pdf/{id}`, `purchase_pdf/{id}`, `quote_pdf/{id}`, etc.
 
-### Inventory Management
-- Multi-warehouse support with stock transfers
-- Product variants with different units
-- Stock adjustments and count stock
-- IMEI/Serial number tracking
-- Barcode generation and scanning
+### Database
+- MySQL with 200+ migrations in `database/migrations/`
+- Seeder order matters (in `DatabaseSeeder.php`): Clients → Currencies → Settings → Server → Permissions → Roles → Users → UserRoles → PermissionRoles → Warehouse
+- Translations seeded from `database/seeders/translations/`
 
-### Sales & POS
-- Point of Sale interface
-- Sales with multiple payment methods
-- Quotations and sales returns
-- Customer management and credit tracking
-- Receipt printing and email/SMS notifications
+### Module System
+- Configured via `nwidart/laravel-modules` with autoloading in `Modules/` directory
+- Module status tracked in `modules_statuses.json`
+- Currently no modules installed
 
-### Purchasing
-- Purchase orders and returns
-- Supplier management
-- Payment tracking and due management
-- Purchase imports via Excel
+## Key Files Reference
 
-### Accounting
-- Chart of accounts
-- Deposits and expenses tracking
-- Payment methods management
-- Financial reports
-- Transfer money between accounts
-
-### HR Management
-- Employee management with departments and designations
-- Attendance tracking
-- Leave management
-- Payroll processing
-- Project and task management
-
-### Reporting
-- Sales, purchase, and inventory reports
-- Customer and supplier reports
-- Financial reports (profit/loss, expenses, deposits)
-- User activity reports
-- Export capabilities (PDF, Excel)
-
-## Important Configuration Files
-
-- `config/app.php` - Main Laravel application configuration
-- `webpack.mix.js` - Frontend build configuration
-- `phpunit.xml` - Testing configuration
-- `modules_statuses.json` - Module status tracking (currently empty)
-
-## Security & Authentication
-
-- Uses Laravel Passport for API authentication
-- Role-based permissions system with policies
-- Middleware for active user verification (`Is_Active`)
-- CSRF protection enabled
-- Input validation and sanitization
-
-## Multilingual Support
-
-- Dynamic translations stored in database (`translations` table)
-- Language management through admin panel
-- Support for 20+ languages including RTL languages
-- Translation files in `database/seeders/translations/`
-
-## API Structure
-
-- RESTful API endpoints under `/api/` prefix
-- OAuth2 authentication required for protected routes
-- Consistent response format via `BaseController`
-- API routes handle password reset, user authentication, and core business operations
-
-## Development Notes
-
-- The application uses extensive database relationships and foreign keys
-- Vue.js components are built as single-file components
-- Laravel Mix handles asset compilation and code splitting
-- The system supports both web interface and API consumption
-- Extensive use of Laravel policies for authorization
-- Database uses soft deletes for many models
-- Application includes comprehensive error logging and debugging capabilities
-
-## Testing
-
-- PHPUnit configured for Feature and Unit tests
-- Test environment uses SQLite in-memory database
-- Basic test structure present in `tests/` directory
+| Purpose | Path |
+|---------|------|
+| API routes | `routes/api.php` |
+| Web routes | `routes/web.php` |
+| Base controller | `app/Http/Controllers/BaseController.php` |
+| Helpers (filter/permissions) | `app/utils/helpers.php` |
+| Active user middleware | `app/Http/Middleware/Is_Active.php` |
+| HTTP Kernel (middleware config) | `app/Http/Kernel.php` |
+| Vue app entry | `resources/src/main.js` |
+| Vue router | `resources/src/router.js` |
+| Vuex store | `resources/src/store/index.js` |
+| Webpack/Mix config | `webpack.mix.js` |
+| Setup wizard | `app/Http/Controllers/SetupController.php` |
+| SaaS migration plan | `PLAN.md` |

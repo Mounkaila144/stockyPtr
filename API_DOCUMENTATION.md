@@ -1,13 +1,25 @@
 # StockyPTR - Documentation API Complète
 
 > Documentation de tous les endpoints API pour le développement de l'application mobile.
-> **Base URL :** `https://school.ptrniger.com/api`
+> **Architecture :** Multi-tenant SaaS (base de données par tenant)
+> **Base URL :** `https://{tenant}.wuroobiz.ptrniger.com/api`
+> **Site central :** `https://wuroobiz.ptrniger.com`
 > **Authentification :** OAuth2 via Laravel Passport (Bearer Token)
 
 ---
 
 ## Table des matières
 
+### Architecture SaaS Multi-Tenant
+0. [Architecture SaaS Multi-Tenant](#0-architecture-saas-multi-tenant)
+   - [Concept](#concept)
+   - [Résolution de tenant](#résolution-de-tenant)
+   - [Inscription tenant](#inscription-tenant)
+   - [Plans d'abonnement](#plans-dabonnement)
+   - [Super Admin Panel](#super-admin-panel)
+   - [Commandes Artisan](#commandes-artisan)
+
+### API Tenant (endpoints métier)
 1. [Authentification](#1-authentification)
 2. [Mot de passe oublié](#2-mot-de-passe-oublié)
 3. [Utilisateurs](#3-utilisateurs)
@@ -75,6 +87,348 @@
 65. [Comptage de stock](#65-comptage-de-stock)
 66. [PDF et Impressions](#66-pdf-et-impressions)
 67. [Mise à jour système](#67-mise-à-jour-système)
+
+---
+
+## 0. Architecture SaaS Multi-Tenant
+
+### Concept
+
+StockyPTR utilise une architecture **multi-tenant avec base de données par tenant**. Chaque entreprise inscrite dispose de :
+- Un **sous-domaine dédié** : `{slug}.wuroobiz.ptrniger.com`
+- Une **base de données isolée** : `stocky_tenant_{slug}`
+- Des **données complètement séparées** des autres tenants
+
+La plateforme centrale (`wuroobiz.ptrniger.com`) gère l'inscription, les plans d'abonnement et l'administration.
+
+### Résolution de tenant
+
+Le middleware `IdentifyTenant` intercepte chaque requête et :
+
+1. **Domaine principal** (`wuroobiz.ptrniger.com`) → site central (landing, inscription, super admin)
+2. **Sous-domaine** (`entreprise.wuroobiz.ptrniger.com`) → résout le tenant, configure la base de données dynamiquement
+
+**Codes d'erreur liés au tenant :**
+
+| Code | Cas | Description |
+|------|-----|-------------|
+| 200 | Tenant valide | Requête traitée normalement sur la DB du tenant |
+| 404 | Sous-domaine inconnu | `Tenant introuvable.` |
+| 403 | Tenant inactif/essai expiré | `Ce compte est inactif ou la période d'essai est terminée.` |
+
+### Base URLs
+
+| Contexte | Base URL |
+|----------|----------|
+| Site central (landing, inscription) | `https://wuroobiz.ptrniger.com` |
+| API d'un tenant | `https://{slug}.wuroobiz.ptrniger.com/api` |
+| SPA d'un tenant | `https://{slug}.wuroobiz.ptrniger.com/login` |
+| Super Admin | `https://wuroobiz.ptrniger.com/admin` |
+
+> **Important :** Toutes les requêtes API documentées ci-dessous (sections 1 à 67) s'exécutent sur le sous-domaine du tenant : `https://{slug}.wuroobiz.ptrniger.com/api/...`
+
+---
+
+### Plans d'abonnement
+
+Les plans sont stockés dans la base de données centrale et définissent les limites de chaque tenant.
+
+#### Structure d'un Plan
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Identifiant unique |
+| `name` | string | Nom du plan (ex: "Basic", "Medium", "Premium") |
+| `slug` | string | Identifiant URL (ex: "basic", "medium", "premium") |
+| `price` | integer | Prix en FCFA (ex: 30000) |
+| `billing_cycle` | string | Cycle de facturation (`monthly`) |
+| `max_users` | integer | Nombre max d'utilisateurs (0 = illimité) |
+| `max_warehouses` | integer | Nombre max d'entrepôts (0 = illimité) |
+| `max_products` | integer | Nombre max de produits (0 = illimité) |
+| `features` | JSON | Liste des fonctionnalités activées |
+| `is_active` | boolean | Plan disponible à l'inscription |
+
+#### Plans disponibles
+
+| Plan | Prix/mois | Utilisateurs | Entrepôts | Produits | Fonctionnalités |
+|------|-----------|-------------|-----------|----------|-----------------|
+| **Basic** | 30 000 FCFA | 5 | 3 | 500 | POS, Inventaire, Ventes, Achats |
+| **Medium** | 70 000 FCFA | 15 | 10 | 5 000 | Basic + RH, Comptabilité, Rapports avancés |
+| **Premium** | 200 000 FCFA | Illimité | Illimité | Illimité | Toutes fonctionnalités + Support prioritaire |
+
+---
+
+### Inscription tenant
+
+#### GET `/register/{plan?}` **Public**
+
+Affiche le formulaire d'inscription. Le paramètre optionnel `plan` pré-sélectionne un plan.
+
+**Exemples :**
+- `https://wuroobiz.ptrniger.com/register` → formulaire sans plan pré-sélectionné
+- `https://wuroobiz.ptrniger.com/register/basic` → plan Basic pré-sélectionné
+- `https://wuroobiz.ptrniger.com/register/premium` → plan Premium pré-sélectionné
+
+#### POST `/register` **Public**
+
+Crée un nouveau tenant avec sa base de données complète.
+
+**Body (form-data) :**
+
+| Champ | Type | Requis | Validation | Description |
+|-------|------|--------|------------|-------------|
+| `company_name` | string | oui | max:255 | Nom de l'entreprise |
+| `slug` | string | oui | max:63, regex:`^[a-z0-9][a-z0-9-]*[a-z0-9]$`, unique | Sous-domaine souhaité |
+| `admin_name` | string | oui | max:255 | Nom complet de l'administrateur |
+| `admin_email` | string | oui | email, max:255 | Email de l'administrateur |
+| `password` | string | oui | min:8 | Mot de passe |
+| `password_confirmation` | string | oui | | Confirmation du mot de passe |
+| `plan_id` | integer | oui | exists:plans,id | ID du plan choisi |
+
+**Processus de provisionnement :**
+
+1. Création de l'enregistrement `Tenant` dans la base centrale
+2. Création de la base de données MySQL `stocky_tenant_{slug}`
+3. Exécution de toutes les migrations (81 tables)
+4. Seeding des données initiales :
+   - Client par défaut ("Walk-in Customer")
+   - Devise par défaut (XOF - Franc CFA)
+   - Serveur mail (vide)
+   - Entrepôt principal ("Entrepôt Principal", Niamey, Niger)
+   - Paramètres système (langue: fr, développé par: PTR Niger)
+   - 115 permissions complètes
+   - Rôle "Owner" avec toutes les permissions
+   - Utilisateur administrateur avec le rôle Owner
+   - Association user-rôle
+5. Installation de Laravel Passport (2 OAuth clients)
+
+**Réponse succès :**
+Redirection avec message flash :
+```
+Votre compte a été créé avec succès ! Connectez-vous sur: https://{slug}.wuroobiz.ptrniger.com/login
+```
+
+**Erreurs de validation (422) :**
+```json
+{
+  "errors": {
+    "slug": ["Ce sous-domaine est déjà pris."],
+    "password": ["Les mots de passe ne correspondent pas."]
+  }
+}
+```
+
+**Erreur serveur :**
+```
+Erreur lors de la création du compte: {message technique}
+```
+
+**Règles du sous-domaine (`slug`) :**
+- Lettres minuscules (`a-z`), chiffres (`0-9`) et tirets (`-`) uniquement
+- Doit commencer et finir par une lettre ou un chiffre
+- Maximum 63 caractères
+- Doit être unique parmi tous les tenants
+
+---
+
+### Structure du Tenant
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Identifiant unique |
+| `name` | string | Nom de l'entreprise |
+| `slug` | string | Sous-domaine (unique) |
+| `database` | string | Nom de la base de données (`stocky_tenant_{slug}`) |
+| `plan_id` | integer | FK vers le plan d'abonnement |
+| `status` | string | `active`, `inactive`, ou `trial` |
+| `trial_ends_at` | datetime | Date d'expiration de l'essai (14 jours après création) |
+| `admin_email` | string | Email de l'administrateur principal |
+| `admin_name` | string | Nom de l'administrateur principal |
+| `domain` | string | Domaine personnalisé (optionnel, usage futur) |
+| `created_at` | datetime | Date de création |
+| `updated_at` | datetime | Date de dernière modification |
+
+**Statuts du tenant :**
+
+| Statut | Description | Accès |
+|--------|-------------|-------|
+| `trial` | Période d'essai (14 jours) | Accès complet tant que `trial_ends_at` est dans le futur |
+| `active` | Abonnement actif | Accès complet |
+| `inactive` | Désactivé par l'admin | Erreur 403 sur toutes les requêtes |
+
+---
+
+### Super Admin Panel
+
+Le panel Super Admin est accessible uniquement sur le domaine principal. L'authentification se fait par mot de passe unique (défini dans `.env` via `SUPER_ADMIN_PASSWORD`).
+
+#### GET `/admin/login` **Public**
+
+Affiche le formulaire de connexion super admin.
+
+#### POST `/admin/login` **Public**
+
+Authentifie le super admin.
+
+**Body :**
+
+| Champ | Type | Requis | Description |
+|-------|------|--------|-------------|
+| `password` | string | oui | Mot de passe super admin |
+
+**Succès :** Redirection vers `/admin` (dashboard)
+**Erreur :** `Mot de passe incorrect.`
+
+#### POST `/admin/logout`
+
+Déconnecte le super admin et détruit la session.
+
+**Succès :** Redirection vers `/admin/login`
+
+#### GET `/admin` (Dashboard)
+
+Tableau de bord avec :
+- **Statistiques** : total tenants, actifs, en essai, inactifs
+- **Liste des tenants** : nom, sous-domaine, plan, email, statut, date de création
+- **Actions rapides** : activer, désactiver, voir détails
+
+#### GET `/admin/tenant/{id}` (Détail tenant)
+
+Affiche les informations complètes d'un tenant :
+- Nom, sous-domaine, base de données, plan
+- Statut, dates de création et d'expiration d'essai
+- Email et nom de l'administrateur
+- Actions : activer / désactiver
+
+#### POST `/admin/tenant/{id}/activate`
+
+Active un tenant (passe le statut à `active`).
+
+**Succès :** Redirection avec message `Tenant '{name}' activé avec succès.`
+
+#### POST `/admin/tenant/{id}/deactivate`
+
+Désactive un tenant (passe le statut à `inactive`).
+
+**Succès :** Redirection avec message `Tenant '{name}' désactivé.`
+
+#### DELETE `/admin/tenant/{id}`
+
+Supprime un tenant (soft delete - le désactive seulement, la base de données est conservée).
+
+**Succès :** Redirection vers le dashboard avec message `Tenant '{name}' supprimé.`
+
+---
+
+### Commandes Artisan
+
+#### `php artisan tenant:create`
+
+Crée un nouveau tenant via la ligne de commande.
+
+```bash
+php artisan tenant:create {name} {slug} {email} {plan_slug} {--password=password}
+```
+
+**Arguments :**
+
+| Argument | Description |
+|----------|-------------|
+| `name` | Nom de l'entreprise |
+| `slug` | Sous-domaine (sera slugifié) |
+| `email` | Email de l'administrateur |
+| `plan_slug` | Slug du plan (basic, medium, premium) |
+| `--password` | Mot de passe admin (défaut: "password") |
+
+**Exemple :**
+```bash
+php artisan tenant:create "Ma Boutique" ma-boutique admin@maboutique.com basic --password=MonMotDePasse123
+```
+
+#### `php artisan tenant:migrate`
+
+Exécute les migrations sur toutes les bases de données tenant.
+
+```bash
+php artisan tenant:migrate {--seed} {--tenant=}
+```
+
+**Options :**
+
+| Option | Description |
+|--------|-------------|
+| `--seed` | Exécuter aussi les seeders |
+| `--tenant=slug` | Cibler un seul tenant par son slug |
+
+**Exemples :**
+```bash
+# Migrer tous les tenants
+php artisan tenant:migrate
+
+# Migrer un seul tenant
+php artisan tenant:migrate --tenant=ma-boutique
+
+# Migrer et seeder
+php artisan tenant:migrate --seed
+```
+
+---
+
+### Flux d'inscription complet (diagramme)
+
+```
+Utilisateur                    Site Central                  Base Centrale       Base Tenant
+    |                              |                              |                  |
+    |-- GET /register/basic ------>|                              |                  |
+    |<-- Formulaire + plans -------|                              |                  |
+    |                              |                              |                  |
+    |-- POST /register ----------->|                              |                  |
+    |                              |-- INSERT tenant ------------>|                  |
+    |                              |-- CREATE DATABASE ---------->|                  |
+    |                              |                              |-- CREATE DB ---->|
+    |                              |-- MIGRATE ------------------>|                  |
+    |                              |                              |-- 81 tables ---->|
+    |                              |-- SEED DATA ---------------->|                  |
+    |                              |                              |-- données ------>|
+    |                              |-- PASSPORT:INSTALL --------->|                  |
+    |                              |                              |-- OAuth -------->|
+    |<-- Redirect + URL tenant ----|                              |                  |
+    |                              |                              |                  |
+    |== Accès tenant : https://{slug}.wuroobiz.ptrniger.com/login =====================|
+    |                              |                              |                  |
+    |-- POST /api/getAccessToken ->|-- IdentifyTenant middleware--|                  |
+    |                              |   (résout slug -> DB) ------>|                  |
+    |                              |                              |-- auth query --->|
+    |<-- Bearer Token -------------|                              |                  |
+```
+
+---
+
+### Connexion base de données
+
+| Connexion | Base de données | Usage |
+|-----------|----------------|-------|
+| `central` | `stocky_ptr` | Tables `plans`, `tenants` (partagées) |
+| `tenant` | `stocky_tenant_{slug}` | Toutes les tables métier (81 tables, dynamique par requête) |
+| `mysql` | `stocky_ptr` | Connexion Laravel par défaut (fallback) |
+
+### Fichiers clés de l'architecture SaaS
+
+| Fichier | Rôle |
+|---------|------|
+| `app/Http/Middleware/IdentifyTenant.php` | Résolution du tenant par sous-domaine |
+| `app/Models/BaseModel.php` | Modèle abstrait (`$connection = 'tenant'`) |
+| `app/Models/Plan.php` | Modèle Plan (`$connection = 'central'`) |
+| `app/Models/Tenant.php` | Modèle Tenant (`$connection = 'central'`) |
+| `app/Services/TenantService.php` | Création et provisionnement des tenants |
+| `app/Http/Controllers/TenantRegistrationController.php` | Inscription des tenants |
+| `app/Http/Controllers/SuperAdminController.php` | Panel d'administration |
+| `app/Http/Middleware/SuperAdmin.php` | Protection des routes super admin |
+| `app/Console/Commands/CreateTenant.php` | Commande CLI de création tenant |
+| `app/Console/Commands/MigrateTenants.php` | Commande CLI de migration tenant |
+| `config/database.php` | Définition des connexions central/tenant |
+| `database/migrations/central/` | Migrations de la base centrale (plans, tenants) |
+| `database/migrations/` | Migrations des bases tenant (81 tables) |
 
 ---
 
@@ -181,7 +535,7 @@ Récupère le logo de l'application (utile pour l'écran de démarrage mobile).
   "logo": "logo.png"
 }
 ```
-> URL complète de l'image : `https://school.ptrniger.com/images/{logo}`
+> URL complète de l'image : `https://wuroobiz.ptrniger.com/images/{logo}`
 
 ---
 
@@ -3123,19 +3477,37 @@ Récupère les informations de version de l'application.
 
 ## Notes pour le développement mobile
 
-### Flux d'authentification recommandé
+### Flux d'authentification recommandé (SaaS)
 
-1. Appeler `POST /api/getAccessToken` avec email/password
-2. Stocker le `Stocky_token` de manière sécurisée (Keychain iOS / EncryptedSharedPreferences Android)
-3. Inclure `Authorization: Bearer {Stocky_token}` dans toutes les requêtes suivantes
-4. Gérer les réponses 401 pour rafraîchir le token ou rediriger vers la connexion
+1. **Demander le sous-domaine** à l'utilisateur (ex: `ma-boutique`)
+2. Construire la base URL : `https://{sous-domaine}.wuroobiz.ptrniger.com/api`
+3. Appeler `POST /api/getAccessToken` avec email/password sur cette URL
+4. Stocker le `Stocky_token` **et le sous-domaine** de manière sécurisée (Keychain iOS / EncryptedSharedPreferences Android)
+5. Inclure `Authorization: Bearer {Stocky_token}` dans toutes les requêtes suivantes
+6. Gérer les réponses :
+   - **401** → token invalide/expiré → rediriger vers la connexion
+   - **403** → tenant inactif/essai expiré → afficher un message approprié
+   - **404** → sous-domaine inconnu → vérifier le sous-domaine
+
+**Exemple de configuration dynamique :**
+```javascript
+// Stockage des paramètres de connexion
+const tenantSlug = 'ma-boutique';
+const baseURL = `https://${tenantSlug}.wuroobiz.ptrniger.com/api`;
+
+// Configuration Axios
+axios.defaults.baseURL = baseURL;
+axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+```
 
 ### Gestion des images
 
 - Les images produits sont stockées dans `/images/products/`
 - Les logos dans `/images/`
 - Les drapeaux dans `/flags/`
-- URL complète : `https://school.ptrniger.com/images/products/{filename}`
+- URL complète : `https://{slug}.wuroobiz.ptrniger.com/images/products/{filename}`
+
+> **Important :** Les images sont spécifiques à chaque tenant. Utilisez toujours le sous-domaine du tenant dans les URLs d'images.
 
 ### Pagination
 
@@ -3156,7 +3528,14 @@ Pour le POS mobile, il est recommandé de :
 |------|--------------|
 | 200  | Succès |
 | 401  | Non authentifié (token invalide/expiré) |
-| 403  | Non autorisé (permissions insuffisantes) |
-| 404  | Ressource non trouvée |
+| 403  | Non autorisé (permissions insuffisantes) **OU** tenant inactif/essai expiré |
+| 404  | Ressource non trouvée **OU** sous-domaine (tenant) inconnu |
 | 422  | Erreur de validation |
 | 500  | Erreur serveur |
+
+### Isolation des données
+
+Chaque tenant dispose de sa propre base de données. Les données sont **complètement isolées** :
+- Un token obtenu sur `tenant-a.wuroobiz.ptrniger.com` ne fonctionne **pas** sur `tenant-b.wuroobiz.ptrniger.com`
+- Les IDs de produits, ventes, utilisateurs, etc. sont indépendants entre tenants
+- Les images et fichiers uploadés sont propres à chaque tenant

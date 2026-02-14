@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class OfficeShift extends Model
+class OfficeShift extends BaseModel
 {
     use HasFactory;
 

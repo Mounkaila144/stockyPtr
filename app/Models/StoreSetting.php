@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class StoreSetting extends Model
+class StoreSetting extends BaseModel
 {
     protected $table = 'store_settings';
 

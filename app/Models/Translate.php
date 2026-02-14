@@ -3,9 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Translate extends Model
+class Translate extends BaseModel
 {
     protected $table ="translations";
 

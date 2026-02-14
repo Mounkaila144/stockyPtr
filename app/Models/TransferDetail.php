@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class TransferDetail extends Model
+class TransferDetail extends BaseModel
 {
     protected $table = 'transfer_details';
 

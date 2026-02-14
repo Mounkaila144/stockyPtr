@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class AdjustmentDetail extends Model
+class AdjustmentDetail extends BaseModel
 {
 
     protected $fillable = [

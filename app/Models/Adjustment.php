@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Adjustment extends Model
+class Adjustment extends BaseModel
 {
     protected $dates = ['deleted_at'];
 

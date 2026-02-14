@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class QuotationDetail extends Model
+class QuotationDetail extends BaseModel
 {
 
     protected $fillable = [

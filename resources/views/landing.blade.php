@@ -606,13 +606,7 @@
                 <li><a href="#fonctionnalites">Fonctionnalites</a></li>
                 <li><a href="#abonnements">Abonnements</a></li>
                 <li><a href="#contact">Contact</a></li>
-                <li>
-                    @if($isAuthenticated)
-                        <a href="/dashboard" class="btn btn-primary">Tableau de bord</a>
-                    @else
-                        <a href="/login" class="btn btn-primary">Se connecter</a>
-                    @endif
-                </li>
+                <li><a href="/register" class="btn btn-primary">Essai gratuit</a></li>
             </ul>
         </nav>
 
@@ -636,11 +630,7 @@
         <h1>Gerez votre entreprise avec <span>intelligence et simplicite</span></h1>
         <p>StockyPTR est une solution tout-en-un pour la gestion commerciale : point de vente, inventaire, comptabilite, ressources humaines et bien plus encore.</p>
         <div class="hero-buttons">
-            @if($isAuthenticated)
-                <a href="/dashboard" class="btn btn-primary btn-large">Acceder au tableau de bord</a>
-            @else
-                <a href="/login" class="btn btn-primary btn-large">Commencer maintenant</a>
-            @endif
+            <a href="/register" class="btn btn-primary btn-large">Commencer gratuitement</a>
             <a href="#abonnements" class="btn btn-outline btn-large">Voir les tarifs</a>
         </div>
     </div>
@@ -785,11 +775,7 @@
                     </li>
                 </ul>
 
-                @if($isAuthenticated)
-                    <a href="/dashboard" class="btn btn-outline">Tableau de bord</a>
-                @else
-                    <a href="/login" class="btn btn-outline">Commencer</a>
-                @endif
+                <a href="/register/basic" class="btn btn-outline">Commencer</a>
             </div>
 
             <!-- MEDIUM -->
@@ -836,11 +822,7 @@
                     </li>
                 </ul>
 
-                @if($isAuthenticated)
-                    <a href="/dashboard" class="btn btn-primary">Tableau de bord</a>
-                @else
-                    <a href="/login" class="btn btn-primary">Commencer</a>
-                @endif
+                <a href="/register/medium" class="btn btn-primary">Commencer</a>
             </div>
 
             <!-- PREMIUM -->
@@ -890,11 +872,7 @@
                     </li>
                 </ul>
 
-                @if($isAuthenticated)
-                    <a href="/dashboard" class="btn btn-outline">Tableau de bord</a>
-                @else
-                    <a href="/login" class="btn btn-outline">Commencer</a>
-                @endif
+                <a href="/register/premium" class="btn btn-outline">Commencer</a>
             </div>
         </div>
     </div>
@@ -905,11 +883,7 @@
     <div class="container cta-content">
         <h2>Pret a transformer votre gestion commerciale ?</h2>
         <p>Rejoignez les entreprises nigeriennes qui font confiance a StockyPTR pour leur croissance.</p>
-        @if($isAuthenticated)
-            <a href="/dashboard" class="btn btn-white btn-large">Acceder au tableau de bord</a>
-        @else
-            <a href="/login" class="btn btn-white btn-large">Commencer gratuitement</a>
-        @endif
+        <a href="/register" class="btn btn-white btn-large">Commencer gratuitement - 14 jours d'essai</a>
     </div>
 </section>
 

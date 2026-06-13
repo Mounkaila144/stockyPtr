@@ -145,16 +145,22 @@ Les plans sont stockés dans la base de données centrale et définissent les li
 | `max_users` | integer | Nombre max d'utilisateurs (0 = illimité) |
 | `max_warehouses` | integer | Nombre max d'entrepôts (0 = illimité) |
 | `max_products` | integer | Nombre max de produits (0 = illimité) |
-| `features` | JSON | Liste des fonctionnalités activées |
+| `features` | JSON | Tableau de clés de modules activés (ex: `["products", "sales", "pos"]`) |
 | `is_active` | boolean | Plan disponible à l'inscription |
+
+#### Format des features
+
+Les features sont un tableau JSON de clés de modules définis dans `config/plan_modules.php`. Chaque clé correspond à un ensemble de permissions qui seront autorisées pour les utilisateurs du tenant.
+
+**Modules disponibles (14) :** `products`, `stock_adjustment`, `stock_transfer`, `purchases`, `sales`, `pos`, `quotations`, `sales_return`, `purchase_return`, `accounting`, `people`, `hrm`, `reports`, `settings`
 
 #### Plans disponibles
 
-| Plan | Prix/mois | Utilisateurs | Entrepôts | Produits | Fonctionnalités |
-|------|-----------|-------------|-----------|----------|-----------------|
-| **Basic** | 30 000 FCFA | 5 | 3 | 500 | POS, Inventaire, Ventes, Achats |
-| **Medium** | 70 000 FCFA | 15 | 10 | 5 000 | Basic + RH, Comptabilité, Rapports avancés |
-| **Premium** | 200 000 FCFA | Illimité | Illimité | Illimité | Toutes fonctionnalités + Support prioritaire |
+| Plan | Prix/mois | Utilisateurs | Entrepôts | Produits | Modules |
+|------|-----------|-------------|-----------|----------|---------|
+| **Basic** | 30 000 FCFA | 5 | 3 | 500 | products, sales, purchases, pos, people, settings |
+| **Medium** | 70 000 FCFA | 15 | 10 | Illimité | Basic + stock_adjustment, stock_transfer, quotations, sales_return, purchase_return, accounting, reports |
+| **Premium** | 200 000 FCFA | Illimité | Illimité | Illimité | Tous les modules (14) |
 
 ---
 
@@ -318,6 +324,26 @@ Supprime un tenant (soft delete - le désactive seulement, la base de données e
 
 **Succès :** Redirection vers le dashboard avec message `Tenant '{name}' supprimé.`
 
+#### GET `/admin/plans` (Gestion des plans)
+
+Liste tous les plans avec le nombre de tenants, les modules activés et un bouton "Configurer modules".
+
+#### GET `/admin/plans/{id}/features` (Configurer les modules)
+
+Affiche une grille de checkboxes pour activer/désactiver les modules d'un plan. Chaque module affiche son label, sa description et le nombre de permissions associées. Les modules sont définis dans `config/plan_modules.php`.
+
+#### POST `/admin/plans/{id}/features` (Sauvegarder les modules)
+
+Sauvegarde les modules activés pour un plan.
+
+**Body :**
+
+| Champ | Type | Requis | Description |
+|-------|------|--------|-------------|
+| `modules[]` | array | non | Tableau de clés de modules à activer |
+
+**Succès :** Redirection avec message `Modules du plan '{name}' mis à jour avec succès.`
+
 ---
 
 ### Commandes Artisan
@@ -422,8 +448,9 @@ Utilisateur                    Site Central                  Base Centrale      
 | `app/Models/Tenant.php` | Modèle Tenant (`$connection = 'central'`) |
 | `app/Services/TenantService.php` | Création et provisionnement des tenants |
 | `app/Http/Controllers/TenantRegistrationController.php` | Inscription des tenants |
-| `app/Http/Controllers/SuperAdminController.php` | Panel d'administration |
+| `app/Http/Controllers/SuperAdminController.php` | Panel d'administration (tenants + plans) |
 | `app/Http/Middleware/SuperAdmin.php` | Protection des routes super admin |
+| `config/plan_modules.php` | Mapping modules → permissions (source unique de vérité) |
 | `app/Console/Commands/CreateTenant.php` | Commande CLI de création tenant |
 | `app/Console/Commands/MigrateTenants.php` | Commande CLI de migration tenant |
 | `config/database.php` | Définition des connexions central/tenant |
@@ -588,6 +615,8 @@ Réinitialise le mot de passe.
 ### GET `/api/get_user_auth`
 
 Récupère les informations de l'utilisateur connecté avec ses permissions et paramètres.
+
+**Filtrage par plan :** Sur un sous-domaine tenant, les permissions retournées sont filtrées selon les modules activés dans le plan du tenant (`config/plan_modules.php`). Seules les permissions correspondant aux modules du plan sont renvoyées. Le sidebar Vue.js masque automatiquement les menus non autorisés via `currentUserPermissions.includes()`. Sur le domaine central (sans sous-domaine), toutes les permissions du rôle sont retournées sans filtre.
 
 ### GET `/api/Get_user_profile`
 

@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscription | StockyPTR</title>
+    <title>Inscription | Wuroobiz</title>
+    <link rel="icon" type="image/jpeg" href="/icone.jpeg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --indigo: #4f46e5;
+            --primary: #2596be;
+            --primary-dark: #1e7a9e;
+            --red: #e63946;
+            --red-dark: #c5303c;
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -31,7 +33,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: var(--gray-800);
             line-height: 1.6;
-            background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 50%, #f5f3ff 100%);
+            background: linear-gradient(135deg, #e8f6fc 0%, #f0f9ff 50%, #fef2f2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -47,22 +49,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            font-weight: 800;
-            font-size: 1.4rem;
-            color: var(--primary);
             margin-bottom: 32px;
         }
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), var(--indigo));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .logo img {
+            height: 52px;
+            width: auto;
         }
-        .logo-icon svg { width: 24px; height: 24px; }
         .card {
             background: var(--white);
             border-radius: 20px;
@@ -82,6 +74,9 @@
             color: var(--gray-500);
             font-size: 0.95rem;
             margin-bottom: 32px;
+        }
+        .card .subtitle strong {
+            color: var(--primary);
         }
         .form-group {
             margin-bottom: 20px;
@@ -107,7 +102,7 @@
         .form-group input:focus, .form-group select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 150, 190, 0.12);
         }
         .slug-preview {
             font-size: 0.8rem;
@@ -136,14 +131,15 @@
             cursor: pointer;
             transition: all 0.2s;
             font-family: inherit;
-            background: linear-gradient(135deg, var(--primary), var(--indigo));
+            background: var(--red);
             color: var(--white);
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 2px 8px rgba(230, 57, 70, 0.3);
             margin-top: 8px;
         }
         .btn:hover {
+            background: var(--red-dark);
             transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 4px 16px rgba(230, 57, 70, 0.4);
         }
         .alert {
             padding: 12px 16px;
@@ -166,25 +162,91 @@
             border: 1px solid #fca5a5;
             color: #991b1b;
         }
-        .plan-badge {
-            display: inline-flex;
-            padding: 4px 12px;
-            background: linear-gradient(135deg, var(--primary), var(--indigo));
-            color: var(--white);
-            border-radius: 100px;
-            font-size: 0.8rem;
+
+        /* ========== PLAN CARDS ========== */
+        .plans-label {
+            display: block;
+            font-size: 0.875rem;
             font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 10px;
         }
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .plan-card {
+            position: relative;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--white);
+        }
+        .plan-card:hover {
+            border-color: var(--primary);
+        }
+        .plan-card.selected {
+            border-color: var(--primary);
+            background: #e8f6fc;
+            box-shadow: 0 0 0 3px rgba(37, 150, 190, 0.12);
+        }
+        .plan-card .plan-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+        .plan-card .plan-price {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .plan-card .plan-price small {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--gray-500);
+        }
+        .plan-card .plan-popular {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--red);
+            color: var(--white);
+            padding: 2px 10px;
+            border-radius: 100px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .plan-card input[type="radio"] {
+            display: none;
+        }
+
         .back-link {
             display: block;
             text-align: center;
             margin-top: 20px;
             color: var(--gray-500);
             font-size: 0.9rem;
+            transition: color 0.2s;
         }
         .back-link:hover { color: var(--primary); }
+
+        .divider {
+            height: 1px;
+            background: var(--gray-200);
+            margin: 24px 0;
+        }
+
         @media (max-width: 480px) {
             .form-row { grid-template-columns: 1fr; }
+            .plans-grid { grid-template-columns: 1fr; }
             .card { padding: 24px; }
         }
     </style>
@@ -192,18 +254,12 @@
 <body>
     <div class="register-container">
         <a href="/" class="logo">
-            <div class="logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-            </div>
-            StockyPTR
+            <img src="/logow.png" alt="Wuroobiz">
         </a>
 
         <div class="card">
             <h1>Creer votre compte</h1>
-            <p class="subtitle">Commencez avec 14 jours d'essai gratuit</p>
+            <p class="subtitle">Commencez avec <strong>1 semaine d'essai gratuit</strong></p>
 
             @if(session('success'))
                 <div class="alert alert-success">
@@ -236,6 +292,8 @@
                     <div class="slug-preview">Votre URL : <span id="slugPreview">votre-entreprise</span>.{{ config('app.base_domain') }}</div>
                 </div>
 
+                <div class="divider"></div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="admin_name">Nom complet</label>
@@ -247,6 +305,11 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label for="phone">Telephone</label>
+                    <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" required placeholder="Ex: +227 90 00 00 00">
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="password">Mot de passe</label>
@@ -254,33 +317,48 @@
                     </div>
                     <div class="form-group">
                         <label for="password_confirmation">Confirmer</label>
-                        <input type="password" id="password_confirmation" name="password_confirmation" required placeholder="Confirmer le mot de passe">
+                        <input type="password" id="password_confirmation" name="password_confirmation" required placeholder="Confirmer">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="plan_id">Formule</label>
-                    <select id="plan_id" name="plan_id" required>
-                        @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}" {{ ($selectedPlan && $selectedPlan->id == $plan->id) ? 'selected' : '' }}>
-                                {{ $plan->name }} - {{ number_format($plan->price, 0, ',', ' ') }} FCFA/mois
-                            </option>
-                        @endforeach
-                    </select>
+                <div class="divider"></div>
+
+                <label class="plans-label">Choisissez votre formule</label>
+                <div class="plans-grid">
+                    @foreach($plans as $index => $plan)
+                        <label class="plan-card {{ ($selectedPlan && $selectedPlan->id == $plan->id) ? 'selected' : ($index == 1 && !$selectedPlan ? 'selected' : '') }}" data-plan-id="{{ $plan->id }}">
+                            @if($index == 1)
+                                <div class="plan-popular">Populaire</div>
+                            @endif
+                            <input type="radio" name="plan_id" value="{{ $plan->id }}" {{ ($selectedPlan && $selectedPlan->id == $plan->id) ? 'checked' : ($index == 1 && !$selectedPlan ? 'checked' : '') }} required>
+                            <div class="plan-name">{{ $plan->name }}</div>
+                            <div class="plan-price">{{ number_format($plan->price, 0, ',', ' ') }} <small>FCFA/mois</small></div>
+                        </label>
+                    @endforeach
                 </div>
 
                 <button type="submit" class="btn">Creer mon compte</button>
             </form>
         </div>
 
-        <a href="/" class="back-link">Retour a l'accueil</a>
+        <a href="/" class="back-link">← Retour a l'accueil</a>
     </div>
 
     <script>
+        // Slug preview
         var slugInput = document.getElementById('slug');
         var slugPreview = document.getElementById('slugPreview');
         slugInput.addEventListener('input', function() {
             slugPreview.textContent = this.value || 'votre-entreprise';
+        });
+
+        // Plan card selection
+        document.querySelectorAll('.plan-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.plan-card').forEach(function(c) { c.classList.remove('selected'); });
+                this.classList.add('selected');
+                this.querySelector('input[type="radio"]').checked = true;
+            });
         });
     </script>
 </body>

@@ -15,6 +15,7 @@
         "@stripe/stripe-js": "^1.20.3",
         "@trevoreyre/autocomplete-vue": "^2.2.0",
         "@vee-validate/i18n": "^4.5.3",
+        "animate.scss": "^0.0.6",
         "axios": "^0.19.2",
         "babel-polyfill": "^6.26.0",
         "bootstrap": "^4.5.3",

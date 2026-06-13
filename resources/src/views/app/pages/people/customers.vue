@@ -518,6 +518,21 @@
               </validation-provider>
             </b-col>
             
+             <!-- Customer Type -->
+            <b-col md="6" sm="12">
+                <b-form-group :label="$t('ClientType')">
+                  <v-select
+                    :reduce="label => label.value"
+                    :placeholder="$t('ClientType')"
+                    v-model="client.client_type"
+                    :options="[
+                      { label: $t('Retail_Client'), value: 'retail' },
+                      { label: $t('Wholesale_Reseller'), value: 'wholesale' }
+                    ]"
+                  />
+                </b-form-group>
+            </b-col>
+
              <!-- Customer Email -->
             <b-col md="6" sm="12">
                 <b-form-group :label="$t('Email')">
@@ -934,6 +949,7 @@ export default {
         city: "",
         adresse: "",
         tax_number: "",
+        client_type: "retail",
 
       },
       client_store: {
@@ -1466,7 +1482,8 @@ export default {
           tax_number: this.client.tax_number,
           country: this.client.country,
           city: this.client.city,
-          adresse: this.client.adresse
+          adresse: this.client.adresse,
+          client_type: this.client.client_type || 'retail',
         })
         .then(response => {
           Fire.$emit("Event_Customer");
@@ -1496,7 +1513,8 @@ export default {
           tax_number: this.client.tax_number,
           country: this.client.country,
           city: this.client.city,
-          adresse: this.client.adresse
+          adresse: this.client.adresse,
+          client_type: this.client.client_type || 'retail',
         })
         .then(response => {
           Fire.$emit("Event_Customer");
@@ -1524,7 +1542,8 @@ export default {
         country: "",
         tax_number: "",
         city: "",
-        adresse: ""
+        adresse: "",
+        client_type: "retail",
       };
     },
 

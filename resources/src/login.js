@@ -1,26 +1,10 @@
 import store from "./store";
 import Vue from "vue";
-import router, { setupRouterGuards } from "./router";
 import { ValidationObserver, ValidationProvider, extend, localize } from 'vee-validate';
 import * as rules from "vee-validate/dist/rules";
 import BootstrapVue from 'bootstrap-vue/dist/bootstrap-vue.esm';
 Vue.use(BootstrapVue);
 import "./assets/styles/sass/themes/lite-purple.scss";
-
-Vue.component(
-  "large-sidebar",
-  // The `import` function returns a Promise.
-  () => import(/* webpackChunkName: "largeSidebar" */ "./containers/layouts/largeSidebar")
-);
-
-Vue.component(
-  "customizer",
-  // The `import` function returns a Promise.
-  () => import(/* webpackChunkName: "customizer" */ "./components/common/customizer.vue")
-);
-Vue.component("vue-perfect-scrollbar", () =>
-  import(/* webpackChunkName: "vue-perfect-scrollbar" */ "vue-perfect-scrollbar")
-);
 import Meta from "vue-meta";
 
 Vue.use(Meta, {
@@ -64,15 +48,8 @@ axios.interceptors.response.use((response) => {
   return response;
 }, (error) => {
   if (error.response && error.response.data) {
-    if (error.response.status === 401) {
+    if (error.response.status === 401 && window.location.pathname !== '/login') {
       window.location.href='/login';
-    }
-
-    if (error.response.status === 404) {
-      router.push({ name: 'NotFound' });
-    }
-    if (error.response.status === 403) {
-      router.push({ name: 'not_authorize' });
     }
 
     return Promise.reject(error.response.data);
@@ -95,15 +72,20 @@ Vue.use(VueI18n);
 
 import { loadI18n } from './plugins/i18n.loader';
 
+function hideSpinner() {
+  const el = document.getElementById('loading_wrap');
+  if (el) el.style.display = 'none';
+}
+
 loadI18n().then(i18n => {
- store.commit('SetDefaultLanguage', { i18n, Language: i18n.locale });
-  setupRouterGuards(i18n); // ✅ inject into router
+  store.commit('SetDefaultLanguage', { i18n, Language: i18n.locale });
 
   new Vue({
     el: '#login',
     store,
-    router,
     i18n,
+    mounted() { hideSpinner(); },
   });
+}).catch(() => {
+  hideSpinner();
 });
-

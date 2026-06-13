@@ -55,7 +55,7 @@
               height="50"
               width="50"
               fluid
-              :src="'/images/brands/' + props.row.image"
+              :src="imagePath('brands', props.row.image)"
               alt="image"
             ></b-img>
           </span>

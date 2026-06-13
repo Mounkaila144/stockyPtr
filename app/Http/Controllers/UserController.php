@@ -10,6 +10,7 @@ use App\Models\product_warehouse;
 use App\Models\Warehouse;
 use App\Models\UserWarehouse;
 use App\utils\helpers;
+use App\utils\TenantStorage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Config;
@@ -102,9 +103,12 @@ class UserController extends BaseController
             'developed_by'        => $settings->developed_by ?? '',
             'app_name'            => $settings->app_name ?? config('app.name'),
             'page_title_suffix'   => $settings->page_title_suffix ?? '',
+            'image_base'          => TenantStorage::imageBasePath(),
+            'flag_base'           => TenantStorage::flagBasePath(),
         ];
 
-        $permissions = $user->roles()->first()?->permissions->pluck('name') ?? [];
+        $permissions = $user->roles()->first()?->permissions->pluck('name') ?? collect();
+        $permissions = $this->filterPermissionsByPlan($permissions);
 
         $productsAlerts = product_warehouse::join('products', 'product_warehouse.product_id', '=', 'products.id')
             ->whereRaw('qte <= stock_alert')
@@ -121,12 +125,16 @@ class UserController extends BaseController
             ];
         })->toArray();
 
+        $tenant = app()->bound('tenant') ? app('tenant') : null;
+        $tenantFeatures = $tenant ? ($tenant->features ?? []) : [];
+
         return response()->json([
             'success'        => true,
             'user'           => $userData,
             'notifs'         => $productsAlerts,
             'permissions'    => $permissions,
             'ModulesEnabled' => $ModulesEnabled,
+            'tenantFeatures' => (object) $tenantFeatures,
         ]);
     }
 
@@ -163,11 +171,11 @@ class UserController extends BaseController
             if ($request->hasFile('avatar')) {
 
                 $image = $request->file('avatar');
-                $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+                $filename = TenantStorage::safeFilename($image);
 
                 $image_resize = Image::make($image->getRealPath());
                 $image_resize->resize(128, 128);
-                $image_resize->save(public_path('/images/avatar/' . $filename));
+                $image_resize->save(TenantStorage::savePath('avatar') . '/' . $filename);
 
             } else {
                 $filename = 'no_avatar.png';
@@ -256,16 +264,16 @@ class UserController extends BaseController
             if ($request->avatar != $currentAvatar) {
 
                 $image = $request->file('avatar');
-                $path = public_path() . '/images/avatar';
-                $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+                $path = TenantStorage::savePath('avatar');
+                $filename = TenantStorage::safeFilename($image);
 
                 $image_resize = Image::make($image->getRealPath());
                 $image_resize->resize(128, 128);
-                $image_resize->save(public_path('/images/avatar/' . $filename));
+                $image_resize->save($path . '/' . $filename);
 
-                $userPhoto = $path . '/' . $currentAvatar;
-                if (file_exists($userPhoto)) {
-                    if ($user->avatar != 'no_avatar.png') {
+                if (!TenantStorage::isDefaultImage($currentAvatar)) {
+                    $userPhoto = TenantStorage::resolveFilePath('avatar', $currentAvatar);
+                    if (file_exists($userPhoto)) {
                         @unlink($userPhoto);
                     }
                 }
@@ -342,17 +350,16 @@ class UserController extends BaseController
         if ($request->avatar != $currentAvatar) {
 
             $image = $request->file('avatar');
-            $path = public_path() . '/images/avatar';
-            $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+            $path = TenantStorage::savePath('avatar');
+            $filename = TenantStorage::safeFilename($image);
 
             $image_resize = Image::make($image->getRealPath());
             $image_resize->resize(128, 128);
-            $image_resize->save(public_path('/images/avatar/' . $filename));
+            $image_resize->save($path . '/' . $filename);
 
-            $userPhoto = $path . '/' . $currentAvatar;
-
-            if (file_exists($userPhoto)) {
-                if ($user->avatar != 'no_avatar.png') {
+            if (!TenantStorage::isDefaultImage($currentAvatar)) {
+                $userPhoto = TenantStorage::resolveFilePath('avatar', $currentAvatar);
+                if (file_exists($userPhoto)) {
                     @unlink($userPhoto);
                 }
             }
@@ -419,6 +426,53 @@ class UserController extends BaseController
     {
         $data = Auth::user();
         return response()->json(['success' => true, 'user' => $data]);
+    }
+
+    //------------- FILTER PERMISSIONS BY PLAN ---------\\
+
+    private function filterPermissionsByPlan($permissions)
+    {
+        // No tenant bound = central domain, return all permissions
+        if (!app()->bound('tenant')) {
+            return $permissions;
+        }
+
+        $tenant = app('tenant');
+
+        // Load plan if not already loaded
+        if (!$tenant->relationLoaded('plan')) {
+            $tenant->load('plan');
+        }
+
+        $plan = $tenant->plan;
+        if (!$plan) {
+            return $permissions;
+        }
+
+        $enabledModules = $plan->features ?? [];
+        if (is_string($enabledModules)) {
+            $enabledModules = json_decode($enabledModules, true) ?? [];
+        }
+
+        // If features is still old format (associative array), extract enabled keys
+        if (!empty($enabledModules) && is_array($enabledModules) && !array_is_list($enabledModules)) {
+            $enabledModules = array_keys(array_filter($enabledModules));
+        }
+
+        // Build the list of allowed permissions from enabled modules
+        $modulesConfig = config('plan_modules.modules', []);
+        $alwaysAllowed = config('plan_modules.always_allowed', []);
+
+        $allowedPermissions = collect($alwaysAllowed);
+
+        foreach ($enabledModules as $moduleKey) {
+            if (isset($modulesConfig[$moduleKey])) {
+                $allowedPermissions = $allowedPermissions->merge($modulesConfig[$moduleKey]['permissions']);
+            }
+        }
+
+        // Intersect: only keep permissions that are both in the user's role AND allowed by the plan
+        return $permissions->intersect($allowedPermissions)->values();
     }
 
 }

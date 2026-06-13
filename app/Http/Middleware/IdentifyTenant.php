@@ -32,14 +32,25 @@ class IdentifyTenant
         }
 
         // Chercher le tenant via le sous-domaine
-        $tenant = Tenant::where('slug', $subdomain)->first();
+        $tenant = Tenant::with('plan')->where('slug', $subdomain)->first();
 
         if (!$tenant) {
             abort(404, 'Tenant introuvable.');
         }
 
         if (!$tenant->isActive()) {
-            abort(403, 'Ce compte est inactif ou la periode d\'essai est terminee.');
+            // API requests: return JSON error
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Votre periode d\'essai est terminee. Veuillez souscrire a un abonnement.',
+                    'error' => 'trial_expired',
+                    'tenant' => $tenant->name,
+                    'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+                ], 403);
+            }
+
+            // Web requests: show friendly page
+            return response()->view('tenant-expired', ['tenant' => $tenant], 403);
         }
 
         // Configurer dynamiquement la connexion tenant

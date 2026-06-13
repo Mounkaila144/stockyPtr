@@ -221,22 +221,29 @@ class SalesController extends BaseController
 
             $data = $request['details'];
             foreach ($data as $key => $value) {
-                $unit = Unit::where('id', $value['sale_unit_id'])
-                    ->first();
+                $sale_unit_id = $value['sale_unit_id'] ?? null;
+                if (!$sale_unit_id) {
+                    $product = Product::find($value['product_id']);
+                    if ($product) {
+                        $sale_unit_id = $product->unit_sale_id ?? $product->unit_id ?? null;
+                    }
+                }
+                $unit = $sale_unit_id ? Unit::where('id', $sale_unit_id)->first() : null;
+
                 $orderDetails[] = [
                     'date'         => $request->date,
                     'sale_id'      => $order->id,
-                    'sale_unit_id' => $value['sale_unit_id']?$value['sale_unit_id']:NULL,
+                    'sale_unit_id' => $sale_unit_id,
                     'quantity'     => $value['quantity'],
                     'price'        => $value['Unit_price'],
-                    'TaxNet'       => $value['tax_percent'],
-                    'tax_method'   => $value['tax_method'],
-                    'discount'     => $value['discount'],
-                    'discount_method'    => $value['discount_Method'],
+                    'TaxNet'       => $value['tax_percent'] ?? 0,
+                    'tax_method'   => $value['tax_method'] ?? '1',
+                    'discount'     => $value['discount'] ?? 0,
+                    'discount_method'    => $value['discount_Method'] ?? '2',
                     'product_id'         => $value['product_id'],
-                    'product_variant_id' => $value['product_variant_id']?$value['product_variant_id']:NULL,
+                    'product_variant_id' => $value['product_variant_id'] ?? null,
                     'total'              => $value['subtotal'],
-                    'imei_number'        => $value['imei_number'],
+                    'imei_number'        => $value['imei_number'] ?? null,
                 ];
 
 
@@ -584,16 +591,16 @@ class SalesController extends BaseController
                         $orderDetails['sale_id']      = $id;
                         $orderDetails['date']         = $request['date'];
                         $orderDetails['price']        = $prod_detail['Unit_price'];
-                        $orderDetails['sale_unit_id'] = $prod_detail['sale_unit_id'];
-                        $orderDetails['TaxNet']       = $prod_detail['tax_percent'];
-                        $orderDetails['tax_method']   = $prod_detail['tax_method'];
-                        $orderDetails['discount']     = $prod_detail['discount'];
-                        $orderDetails['discount_method'] = $prod_detail['discount_Method'];
+                        $orderDetails['sale_unit_id'] = $prod_detail['sale_unit_id'] ?? null;
+                        $orderDetails['TaxNet']       = $prod_detail['tax_percent'] ?? 0;
+                        $orderDetails['tax_method']   = $prod_detail['tax_method'] ?? '1';
+                        $orderDetails['discount']     = $prod_detail['discount'] ?? 0;
+                        $orderDetails['discount_method'] = $prod_detail['discount_Method'] ?? '2';
                         $orderDetails['quantity']        = $prod_detail['quantity'];
                         $orderDetails['product_id']      = $prod_detail['product_id'];
-                        $orderDetails['product_variant_id'] = $prod_detail['product_variant_id'];
+                        $orderDetails['product_variant_id'] = $prod_detail['product_variant_id'] ?? null;
                         $orderDetails['total']              = $prod_detail['subtotal'];
-                        $orderDetails['imei_number']        = $prod_detail['imei_number'];
+                        $orderDetails['imei_number']        = $prod_detail['imei_number'] ?? null;
 
                         if (!in_array($prod_detail['id'], $old_products_id)) {
                             $orderDetails['date'] = $request['date'];
@@ -1125,15 +1132,16 @@ class SalesController extends BaseController
 
         $details = array();
         $helpers = new helpers();
-        $sale_data = Sale::with('details.product.unitSale')
+        $sale_data = Sale::with('details.product.unitSale', 'client')
             ->where('deleted_at', '=', null)
             ->findOrFail($id);
 
-        $sale['client_name'] = $sale_data['client']->name;
-        $sale['client_phone'] = $sale_data['client']->phone;
-        $sale['client_adr'] = $sale_data['client']->adresse;
-        $sale['client_email'] = $sale_data['client']->email;
-        $sale['client_tax'] = $sale_data['client']->tax_number;
+        $client = $sale_data->client;
+        $sale['client_name'] = $client->name ?? '';
+        $sale['client_phone'] = $client->phone ?? '';
+        $sale['client_adr'] = $client->adresse ?? '';
+        $sale['client_email'] = $client->email ?? '';
+        $sale['client_tax'] = $client->tax_number ?? '';
         $sale['TaxNet'] = number_format($sale_data->TaxNet, 2, '.', '');
         $sale['discount'] = number_format($sale_data->discount, 2, '.', '');
         $sale['shipping'] = number_format($sale_data->shipping, 2, '.', '');

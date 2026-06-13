@@ -53,8 +53,12 @@ class AppServiceProvider extends ServiceProvider
 
           $firstSegment = Request::segment(1); // Get the first segment of the URL
 
-          if (!in_array($firstSegment, $excluded)) {
-              $view->with('app_settings', Setting::first());
+          if (!in_array($firstSegment, $excluded) && $view->getName() !== 'tenant-expired') {
+              try {
+                  $view->with('app_settings', Setting::first());
+              } catch (\Exception $e) {
+                  $view->with('app_settings', null);
+              }
           }
       });
 

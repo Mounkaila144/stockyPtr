@@ -70,6 +70,7 @@ class PosController extends BaseController
             ], 422);
         }
 
+        try {
         $item = \DB::transaction(function () use ($request, $totalPaid) {
             $helpers = new helpers();
             $role = Auth::user()->roles()->first();
@@ -97,27 +98,39 @@ class PosController extends BaseController
             $data = $request['details'];
             foreach ($data as $key => $value) {
 
-                $unit = Unit::where('id', $value['sale_unit_id'])
-                    ->first();
+                $sale_unit_id = $value['sale_unit_id'] ?? null;
+
+                // Fallback: if no sale_unit_id provided, use product's unit_sale_id or unit_id
+                if (!$sale_unit_id) {
+                    $product = Product::find($value['product_id']);
+                    if ($product) {
+                        $sale_unit_id = $product->unit_sale_id ?? $product->unit_id ?? null;
+                    }
+                }
+
+                $unit = $sale_unit_id ? Unit::where('id', $sale_unit_id)->first() : null;
+
+                $product_variant_id = $value['product_variant_id'] ?? null;
+
                 $orderDetails[] = [
                     'date' => Carbon::now(),
                     'sale_id' => $order->id,
-                    'sale_unit_id' =>  $value['sale_unit_id'],
+                    'sale_unit_id' =>  $sale_unit_id,
                     'quantity' => $value['quantity'],
                     'product_id' => $value['product_id'],
-                    'product_variant_id' => $value['product_variant_id'],
+                    'product_variant_id' => $product_variant_id,
                     'total' => $value['subtotal'],
                     'price' => $value['Unit_price'],
-                    'TaxNet' => $value['tax_percent'],
-                    'tax_method' => $value['tax_method'],
-                    'discount' => $value['discount'],
-                    'discount_method' => $value['discount_Method'],
-                    'imei_number' => $value['imei_number'],
+                    'TaxNet' => $value['tax_percent'] ?? 0,
+                    'tax_method' => $value['tax_method'] ?? '1',
+                    'discount' => $value['discount'] ?? 0,
+                    'discount_method' => $value['discount_Method'] ?? '2',
+                    'imei_number' => $value['imei_number'] ?? null,
                 ];
 
-                if ($value['product_variant_id'] !== null) {
+                if ($product_variant_id !== null) {
                     $product_warehouse = product_warehouse::where('warehouse_id', $order->warehouse_id)
-                        ->where('product_id', $value['product_id'])->where('product_variant_id', $value['product_variant_id'])
+                        ->where('product_id', $value['product_id'])->where('product_variant_id', $product_variant_id)
                         ->first();
 
                     if ($unit && $product_warehouse) {
@@ -168,6 +181,10 @@ class PosController extends BaseController
                 }
     
                 if ($payment['payment_method_id'] == 1 || $payment['payment_method_id'] == '1') {
+
+                    if (empty(config('app.STRIPE_SECRET'))) {
+                        throw new \Exception('Stripe is not configured. Use a different payment method.');
+                    }
 
                     $client = Client::findOrFail($request->client_id);
                     Stripe\Stripe::setApiKey(config('app.STRIPE_SECRET'));
@@ -249,6 +266,13 @@ class PosController extends BaseController
             return $order->id;
 
         }, 10);
+        } catch (\Exception $e) {
+            \Log::error('POS Create Error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
        $emailError = null;
         $smsError = null;
@@ -572,21 +596,28 @@ class PosController extends BaseController
             $data = $request['details'];
             foreach ($data as $key => $value) {
 
-                $unit = Unit::where('id', $value['sale_unit_id'])->first();
+                $sale_unit_id = $value['sale_unit_id'] ?? null;
+                if (!$sale_unit_id) {
+                    $product = Product::find($value['product_id']);
+                    if ($product) {
+                        $sale_unit_id = $product->unit_sale_id ?? $product->unit_id ?? null;
+                    }
+                }
+
                 $orderDetails[] = [
                 'date' => Carbon::now(),
                 'draft_sale_id' => $order->id,
-                'sale_unit_id' =>  $value['sale_unit_id'],
+                'sale_unit_id' =>  $sale_unit_id,
                 'quantity' => $value['quantity'],
                 'product_id' => $value['product_id'],
-                'product_variant_id' => $value['product_variant_id'],
+                'product_variant_id' => $value['product_variant_id'] ?? null,
                 'total' => $value['subtotal'],
                 'price' => $value['Unit_price'],
-                'TaxNet' => $value['tax_percent'],
-                'tax_method' => $value['tax_method'],
-                'discount' => $value['discount'],
-                'discount_method' => $value['discount_Method'],
-                'imei_number' => $value['imei_number'],
+                'TaxNet' => $value['tax_percent'] ?? 0,
+                'tax_method' => $value['tax_method'] ?? '1',
+                'discount' => $value['discount'] ?? 0,
+                'discount_method' => $value['discount_Method'] ?? '2',
+                'imei_number' => $value['imei_number'] ?? null,
                 ];
             }
 
@@ -665,27 +696,37 @@ class PosController extends BaseController
                 $data = $request['details'];
                 foreach ($data as $key => $value) {
 
-                    $unit = Unit::where('id', $value['sale_unit_id'])
-                        ->first();
+                    $sale_unit_id = $value['sale_unit_id'] ?? null;
+                    if (!$sale_unit_id) {
+                        $product = Product::find($value['product_id']);
+                        if ($product) {
+                            $sale_unit_id = $product->unit_sale_id ?? $product->unit_id ?? null;
+                        }
+                    }
+
+                    $unit = $sale_unit_id ? Unit::where('id', $sale_unit_id)->first() : null;
+
+                    $product_variant_id = $value['product_variant_id'] ?? null;
+
                     $orderDetails[] = [
                         'date' => Carbon::now(),
                         'sale_id' => $order->id,
-                        'sale_unit_id' =>  $value['sale_unit_id'],
+                        'sale_unit_id' =>  $sale_unit_id,
                         'quantity' => $value['quantity'],
                         'product_id' => $value['product_id'],
-                        'product_variant_id' => $value['product_variant_id'],
+                        'product_variant_id' => $product_variant_id,
                         'total' => $value['subtotal'],
                         'price' => $value['Unit_price'],
-                        'TaxNet' => $value['tax_percent'],
-                        'tax_method' => $value['tax_method'],
-                        'discount' => $value['discount'],
-                        'discount_method' => $value['discount_Method'],
-                        'imei_number' => $value['imei_number'],
+                        'TaxNet' => $value['tax_percent'] ?? 0,
+                        'tax_method' => $value['tax_method'] ?? '1',
+                        'discount' => $value['discount'] ?? 0,
+                        'discount_method' => $value['discount_Method'] ?? '2',
+                        'imei_number' => $value['imei_number'] ?? null,
                     ];
 
-                    if ($value['product_variant_id'] !== null) {
+                    if ($product_variant_id !== null) {
                         $product_warehouse = product_warehouse::where('warehouse_id', $order->warehouse_id)
-                            ->where('product_id', $value['product_id'])->where('product_variant_id', $value['product_variant_id'])
+                            ->where('product_id', $value['product_id'])->where('product_variant_id', $product_variant_id)
                             ->first();
 
                         if ($unit && $product_warehouse) {
@@ -736,6 +777,10 @@ class PosController extends BaseController
                                 
                     if($request['amount'] > 0){
                         if ($request->payment['payment_method_id'] == 1 || $request->payment['payment_method_id'] == '1') {
+
+                            if (empty(config('app.STRIPE_SECRET'))) {
+                                throw new \Exception('Stripe is not configured. Use a different payment method.');
+                            }
 
                             $Client = Client::whereId($request->client_id)->first();
                             Stripe\Stripe::setApiKey(config('app.STRIPE_SECRET'));
@@ -1074,7 +1119,8 @@ class PosController extends BaseController
         $this->authorizeForUser($request->user('api'), 'Sales_pos', Sale::class);
 
         // How many items do you want to display.
-        $perPage = PosSetting::where('deleted_at', '=', null)->first()->products_per_page;
+        $posSettingRow = PosSetting::where('deleted_at', '=', null)->first();
+        $perPage = $posSettingRow ? $posSettingRow->products_per_page : 8;
 
         $pageStart = \Request::get('page', 1);
         // Start displaying items from this number;
@@ -1268,7 +1314,8 @@ class PosController extends BaseController
         $categories = Category::where('deleted_at', '=', null)->get(['id', 'name']);
         $brands = Brand::where('deleted_at', '=', null)->get();
         $stripe_key = config('app.STRIPE_KEY');
-        $products_per_page = PosSetting::where('deleted_at', '=', null)->first()->products_per_page;
+        $posSetting = PosSetting::where('deleted_at', '=', null)->first();
+        $products_per_page = $posSetting ? $posSetting->products_per_page : 8;
         $payment_methods = PaymentMethod::where('deleted_at', '=', null)->get(['id', 'name']);
         $languages_available = Language::where('is_active', true)->get(['name', 'locale', 'flag']);
 

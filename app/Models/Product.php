@@ -8,7 +8,8 @@ class Product extends BaseModel
     protected $dates = ['deleted_at'];
 
     protected $fillable = [
-        'code', 'Type_barcode', 'name', 'cost', 'price', 'unit_id', 'unit_sale_id', 'unit_purchase_id',
+        'code', 'Type_barcode', 'name', 'cost', 'price', 'price_wholesale', 'price_retail', 'expiry_date',
+        'unit_id', 'unit_sale_id', 'unit_purchase_id',
         'stock_alert', 'category_id', 'sub_category_id', 'is_variant','is_imei',
         'tax_method', 'image', 'brand_id', 'is_active', 'note','type',
         'warranty_period', 'warranty_unit', 'warranty_terms',
@@ -27,6 +28,9 @@ class Product extends BaseModel
         'is_active' => 'integer',
         'cost' => 'double',
         'price' => 'double',
+        'price_wholesale' => 'double',
+        'price_retail' => 'double',
+        'expiry_date' => 'date',
         'stock_alert' => 'double',
         'TaxNet' => 'double',
         'has_guarantee'   => 'boolean',

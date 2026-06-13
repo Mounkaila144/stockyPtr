@@ -105,7 +105,7 @@
               height="50"
               width="50"
               fluid
-              :src="'/images/products/' + props.row.image"
+              :src="imagePath('products', props.row.image)"
               alt="image"
             ></b-img>
           </span>
@@ -197,11 +197,11 @@
             <!-- File -->
             <b-col md="12" sm="12" class="mb-3">
               <b-form-group>
-                <input type="file" @change="onFileSelected" label="Choose File">
+                <input type="file" @change="onFileSelected" label="Choose File" accept=".csv,.xlsx,.xls">
                 <b-form-invalid-feedback
                   id="File-feedback"
                   class="d-block"
-                >{{$t('field_must_be_in_csv_format')}}</b-form-invalid-feedback>
+                >{{$t('field_must_be_in_csv_or_excel_format')}}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
 
@@ -269,6 +269,34 @@
 
                   <tr>
                     <td>{{$t('Brand')}}</td>
+                    <th>
+                      <span class="badge badge-outline-info">{{$t('Field_optional')}}</span>
+                    </th>
+                  </tr>
+
+                  <tr>
+                    <td>{{$t('WholesalePrice')}} (price_wholesale)</td>
+                    <th>
+                      <span class="badge badge-outline-info">{{$t('Field_optional')}}</span>
+                    </th>
+                  </tr>
+
+                  <tr>
+                    <td>{{$t('RetailPrice')}} (price_retail)</td>
+                    <th>
+                      <span class="badge badge-outline-info">{{$t('Field_optional')}}</span>
+                    </th>
+                  </tr>
+
+                  <tr>
+                    <td>{{$t('InitialStock')}} (initial_stock)</td>
+                    <th>
+                      <span class="badge badge-outline-info">{{$t('Field_optional')}}</span>
+                    </th>
+                  </tr>
+
+                  <tr>
+                    <td>{{$t('ExpiryDate')}} (expiry_date) — YYYY-MM-DD</td>
                     <th>
                       <span class="badge badge-outline-info">{{$t('Field_optional')}}</span>
                     </th>
@@ -395,6 +423,26 @@ export default {
           label: this.$t("Price"),
           field: "price",
           html: true,
+          tdClass: "text-left",
+          thClass: "text-left"
+        },
+        {
+          label: this.$t("WholesalePrice"),
+          field: "price_wholesale",
+          html: true,
+          tdClass: "text-left",
+          thClass: "text-left"
+        },
+        {
+          label: this.$t("RetailPrice"),
+          field: "price_retail",
+          html: true,
+          tdClass: "text-left",
+          thClass: "text-left"
+        },
+        {
+          label: this.$t("ExpiryDate"),
+          field: "expiry_date",
           tdClass: "text-left",
           thClass: "text-left"
         },
@@ -532,7 +580,7 @@ export default {
           } else if (response.data.status === false) {
             this.makeToast(
               "danger",
-              this.$t("field_must_be_in_csv_format"),
+              this.$t("field_must_be_in_csv_or_excel_format"),
               this.$t("Failed")
             );
           }

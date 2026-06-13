@@ -2,7 +2,7 @@
   <div class="main-header">
     <div class="logo">
        <router-link to="/app/dashboard">
-        <img :src="'/images/'+currentUser.logo" alt width="60" height="60">
+        <img src="/logow.png" alt="Wuroobiz" style="max-height:50px; width:auto;">
        </router-link>
     </div>
 
@@ -56,7 +56,7 @@
 
                <a v-for="lang in getAvailableLanguages" :key="lang.locale" @click="SetLocal(lang.locale)">
                   <img
-                    :src="`/flags/${lang.flag}`"
+                    :src="flagPath(lang.flag)"
                     :alt="lang.name"
                     class="flag-icon flag-icon-squared"
                     style="width: 20px; margin-right: 8px"
@@ -121,7 +121,7 @@
         >
           <template slot="button-content" >
             <img
-              :src="'/images/avatar/'+currentUser.avatar"
+              :src="imagePath('avatar', currentUser.avatar)"
               id="userDropdown"
               alt
               data-toggle="dropdown"

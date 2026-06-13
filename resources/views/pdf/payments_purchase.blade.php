@@ -9,7 +9,7 @@
    <body>
       <header class="clearfix">
          <div id="logo">
-         <img src="{{asset('/images/'.$setting['logo'])}}">
+         <img src="{{asset(tenant_image_url('', $setting['logo']))}}">
          </div>
          <div id="company">
             <div><strong> Date: </strong>{{$payment['date']}}</div>

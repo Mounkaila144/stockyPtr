@@ -5,9 +5,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <link rel="stylesheet" href="/css/master.css">
+    <link rel="stylesheet" href="/css/master.css?v={{ filemtime(public_path('css/master.css')) }}">
 
-    <link rel="icon" href="{{ asset('images/' . ($app_settings->favicon ?? 'favicon.ico')) }}">
+    <link rel="icon" type="image/jpeg" href="/icone.jpeg">
     <title>{{ $app_settings->app_name ?? 'Ptrniger | Ultimate Inventory With POS' }}</title>
 
   </head>
@@ -33,7 +33,7 @@
         <forgot-component></forgot-component>
       </div>
 
-      <script src="/js/login.min.js"></script>
+      <script src="/js/login.min.js?v={{ filemtime(public_path('js/login.min.js')) }}"></script>
   </body>
 </html>
 

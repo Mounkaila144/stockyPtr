@@ -106,6 +106,7 @@ class ClientController extends BaseController
             $item['country'] = $client->country;
             $item['city'] = $client->city;
             $item['adresse'] = $client->adresse;
+            $item['client_type'] = $client->client_type ?: 'retail';
             $data[] = $item;
         }
 
@@ -148,6 +149,7 @@ class ClientController extends BaseController
             'country' => $request['country'],
             'city' => $request['city'],
             'tax_number' => $request['tax_number'],
+            'client_type' => in_array($request['client_type'] ?? 'retail', ['retail','wholesale']) ? $request['client_type'] : 'retail',
         ]);
         return response()->json(['success' => true]);
     }
@@ -178,6 +180,7 @@ class ClientController extends BaseController
             'country' => $request['country'],
             'city' => $request['city'],
             'tax_number' => $request['tax_number'],
+            'client_type' => in_array($request['client_type'] ?? 'retail', ['retail','wholesale']) ? $request['client_type'] : 'retail',
         ]);
         return response()->json(['success' => true]);
 
@@ -229,7 +232,7 @@ class ClientController extends BaseController
 
     public function Get_Clients_Without_Paginate()
     {
-        $clients = Client::where('deleted_at', '=', null)->get(['id', 'name']);
+        $clients = Client::where('deleted_at', '=', null)->get(['id', 'name', 'client_type']);
         return response()->json($clients);
     }
 

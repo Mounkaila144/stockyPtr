@@ -108,6 +108,15 @@ if ($installed === false) {
 // Landing page - public route (no auth required)
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
+// Pages legales
+Route::get('/conditions-utilisation', function () {
+    return view('conditions');
+})->name('conditions');
+
+Route::get('/protection-donnees', function () {
+    return view('protection-donnees');
+})->name('protection-donnees');
+
 // Inscription tenant
 Route::get('/register/{plan?}', [TenantRegistrationController::class, 'showForm'])->name('register.tenant');
 Route::post('/register', [TenantRegistrationController::class, 'register'])->name('register.tenant.submit');
@@ -118,7 +127,14 @@ Route::prefix('admin')->middleware('superadmin')->group(function () {
     Route::get('/tenant/{id}', [SuperAdminController::class, 'show'])->name('superadmin.tenant.show');
     Route::post('/tenant/{id}/activate', [SuperAdminController::class, 'activate'])->name('superadmin.tenant.activate');
     Route::post('/tenant/{id}/deactivate', [SuperAdminController::class, 'deactivate'])->name('superadmin.tenant.deactivate');
+    Route::post('/tenant/{id}/change-plan', [SuperAdminController::class, 'changePlan'])->name('superadmin.tenant.changePlan');
+    Route::post('/tenant/{id}/features', [SuperAdminController::class, 'updateTenantFeatures'])->name('superadmin.tenant.features.update');
     Route::delete('/tenant/{id}', [SuperAdminController::class, 'destroy'])->name('superadmin.tenant.destroy');
+
+    // Plans management
+    Route::get('/plans', [SuperAdminController::class, 'plans'])->name('superadmin.plans');
+    Route::get('/plans/{id}/features', [SuperAdminController::class, 'editFeatures'])->name('superadmin.plans.features');
+    Route::post('/plans/{id}/features', [SuperAdminController::class, 'updateFeatures'])->name('superadmin.plans.features.update');
 });
 Route::get('/admin/login', [SuperAdminController::class, 'loginForm'])->name('superadmin.login');
 Route::post('/admin/login', [SuperAdminController::class, 'login'])->name('superadmin.login.submit');
@@ -147,9 +163,11 @@ Route::group(['middleware' => ['web', 'auth:web', 'Is_Active']], function () {
             return view('layouts.master' , [
                 'ModulesInstalled' => $ModulesData['ModulesInstalled'],
                 'ModulesEnabled' => $ModulesData['ModulesEnabled'],
+                'image_base' => \App\utils\TenantStorage::imageBasePath(),
+                'flag_base' => \App\utils\TenantStorage::flagBasePath(),
             ]);
         }
-    })->where('vue', '^(?!api|setup|update|update_database_module|password|module|store|online_store).*$');
+    })->where('vue', '^(?!api|setup|update|update_database_module|password|module|store|online_store|conditions-utilisation|protection-donnees).*$');
  
 });
    

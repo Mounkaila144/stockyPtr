@@ -8,6 +8,7 @@ use App\Models\Translate;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\utils\TenantStorage;
 
 
 class LanguageController extends Controller
@@ -44,10 +45,10 @@ class LanguageController extends Controller
         if ($request->hasFile('flag')) {
 
             $image = $request->file('flag');
-            $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+            $filename = TenantStorage::safeFilename($image);
 
             $image_resize = Image::make($image->getRealPath());
-            $image_resize->save(public_path('/flags/' . $filename));
+            $image_resize->save(TenantStorage::flagSavePath() . '/' . $filename);
 
         } else {
             $filename = 'no-image.png';
@@ -75,8 +76,8 @@ class LanguageController extends Controller
         // Handle flag upload
        if ($request->hasFile('flag')) {
             // Delete old flag if not default
-            if ($language->flag && $language->flag !== 'no-image.png') {
-                $oldPath = public_path('/flags/' . $language->flag);
+            if ($language->flag && !TenantStorage::isDefaultImage($language->flag)) {
+                $oldPath = TenantStorage::flagSavePath() . '/' . $language->flag;
                 if (file_exists($oldPath)) {
                     @unlink($oldPath);
                 }
@@ -85,11 +86,12 @@ class LanguageController extends Controller
             $image = $request->file('flag');
             $extension = strtolower($image->getClientOriginalExtension());
             $filename = rand(11111111, 99999999) . '.' . $extension;
-            $destination = public_path('/flags/' . $filename);
+            $flagPath = TenantStorage::flagSavePath();
+            $destination = $flagPath . '/' . $filename;
 
             if ($extension === 'svg') {
                 // Just move the SVG without resizing
-                $image->move(public_path('/flags'), $filename);
+                $image->move($flagPath, $filename);
             } else {
                 // Resize for raster formats
                 $image_resize = \Image::make($image->getRealPath());

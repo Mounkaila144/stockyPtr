@@ -39,7 +39,7 @@
 
         <template slot="table-row" slot-scope="props">
           <span v-if="props.column.field == 'file_stock'">
-            <a :href="'/images/count_stock/' + props.row.file_stock" >
+            <a :href="imagePath('count_stock', props.row.file_stock)" >
                 <span class="ul-btn__text ml-1"> {{$t('Download')}}</span>
             </a>
           </span>

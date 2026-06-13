@@ -16,20 +16,28 @@ const MomentLocalesPlugin = require('moment-locales-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 
-mix.js('resources/src/main.js', 'public').js('resources/src/login.js', 'public')
+mix.setPublicPath('public')
+    .js('resources/src/main.js', 'js/main.min.js')
+    .js('resources/src/login.js', 'js/login.min.js')
     .vue();
 
-    mix.webpackConfig({
-        output: {
-          
-            filename:'js/[name].min.js',
-            chunkFilename: 'js/bundle/[name].[hash].js',
-          },
-        plugins: [
-            new MomentLocalesPlugin(),
-            new CleanWebpackPlugin({
-                cleanOnceBeforeBuildPatterns: ['./js/*']
-              }),
-        ]
-    });
+mix.webpackConfig({
+    output: {
+        publicPath: '/',
+        chunkFilename: 'js/bundle/[name].[contenthash:16].js',
+    },
+    plugins: [
+        new MomentLocalesPlugin(),
+        new CleanWebpackPlugin({
+            cleanOnceBeforeBuildPatterns: [
+                'js/main.min.js',
+                'js/login.min.js',
+                'js/bundle/*.js',
+            ],
+        }),
+    ],
+});
 
+if (mix.inProduction()) {
+    mix.version();
+}

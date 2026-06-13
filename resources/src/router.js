@@ -1483,6 +1483,28 @@ const router = new Router({
     }
 });
 
+router.onError(error => {
+  NProgress.done();
+
+  const loadingChunkFailed = /Loading chunk .* failed|ChunkLoadError/i.test(error.message);
+  if (!loadingChunkFailed) {
+    console.error('Router navigation failed.', error);
+    return;
+  }
+
+  const reloadKey = 'chunk-load-reload';
+  if (!sessionStorage.getItem(reloadKey)) {
+    sessionStorage.setItem(reloadKey, '1');
+    window.location.reload();
+    return;
+  }
+
+  sessionStorage.removeItem(reloadKey);
+  const spinner = document.getElementById('loading_wrap');
+  if (spinner) spinner.style.display = 'none';
+  console.error('A frontend chunk could not be loaded after reloading.', error);
+});
+
 // Fix redundant navigation error
 const originalPush = Router.prototype.push;
 Router.prototype.push = function push(location, onResolve, onReject) {
@@ -1512,6 +1534,7 @@ export function setupRouterGuards(i18n) {
   });
 
   router.afterEach(() => {
+    sessionStorage.removeItem('chunk-load-reload');
     const gullPreLoading = document.getElementById("loading_wrap");
 if (gullPreLoading) {
     gullPreLoading.style.display = "none";

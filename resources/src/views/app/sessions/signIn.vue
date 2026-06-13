@@ -1,12 +1,12 @@
 <template>
-  <div class="auth-layout-wrap" v-if="logo">
+  <div class="auth-layout-wrap">
     <div class="auth-content">
       <div class="card o-hidden">
         <div class="row" >
           <div class="col-md-12">
             <div class="p-4">
               <div class="auth-logo text-center mb-30">
-                <img :src="logo" alt="logo">
+                <img src="/logow.png" alt="Wuroobiz" style="max-height:60px; width:auto;">
               </div>
               <h1 class="mb-3 text-18">{{$t('SignIn')}}</h1>
               <validation-observer ref="submit_login">

@@ -44,7 +44,7 @@
     <!-- Table of Languages -->
     <b-table :items="languages" :fields="['flag', 'name', 'locale','is_active','is_default', 'actions']" v-if="!isLoading">
       <template #cell(flag)="data">
-        <img :src="`/flags/${data.item.flag}`" width="30" v-if="data.item.flag" />
+        <img :src="flagPath(data.item.flag)" width="30" v-if="data.item.flag" />
       </template>
 
        <template #cell(is_active)="data">

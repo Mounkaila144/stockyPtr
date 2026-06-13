@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use App\utils\helpers;
+use App\utils\TenantStorage;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Http\Request;
@@ -66,11 +67,11 @@ class BrandsController extends Controller
             if ($request->hasFile('image')) {
 
                 $image = $request->file('image');
-                $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+                $filename = TenantStorage::safeFilename($image);
 
                 $image_resize = Image::make($image->getRealPath());
                 $image_resize->resize(200, 200);
-                $image_resize->save(public_path('/images/brands/' . $filename));
+                $image_resize->save(TenantStorage::savePath('brands') . '/' . $filename);
 
             } else {
                 $filename = 'no-image.png';
@@ -112,27 +113,27 @@ class BrandsController extends Controller
  
              if ($currentImage && $request->image != $currentImage) {
                  $image = $request->file('image');
-                 $path = public_path() . '/images/brands';
-                 $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
- 
+                 $path = TenantStorage::savePath('brands');
+                 $filename = TenantStorage::safeFilename($image);
+
                  $image_resize = Image::make($image->getRealPath());
                  $image_resize->resize(200, 200);
-                 $image_resize->save(public_path('/images/brands/' . $filename));
- 
-                 $BrandImage = $path . '/' . $currentImage;
-                 if (file_exists($BrandImage)) {
-                     if ($currentImage != 'no-image.png') {
+                 $image_resize->save($path . '/' . $filename);
+
+                 if (!TenantStorage::isDefaultImage($currentImage)) {
+                     $BrandImage = TenantStorage::resolveFilePath('brands', $currentImage);
+                     if (file_exists($BrandImage)) {
                          @unlink($BrandImage);
                      }
                  }
              } else if (!$currentImage && $request->image !='null'){
                  $image = $request->file('image');
-                 $path = public_path() . '/images/brands';
-                 $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
- 
+                 $path = TenantStorage::savePath('brands');
+                 $filename = TenantStorage::safeFilename($image);
+
                  $image_resize = Image::make($image->getRealPath());
                  $image_resize->resize(200, 200);
-                 $image_resize->save(public_path('/images/brands/' . $filename));
+                 $image_resize->save($path . '/' . $filename);
              }
  
              else {

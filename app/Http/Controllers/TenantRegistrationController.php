@@ -25,12 +25,14 @@ class TenantRegistrationController extends Controller
             'slug' => 'required|string|max:63|regex:/^[a-z0-9][a-z0-9-]*[a-z0-9]$/|unique:App\Models\Tenant,slug',
             'admin_name' => 'required|string|max:255',
             'admin_email' => 'required|email|max:255',
+            'phone' => 'required|string|max:30',
             'password' => 'required|string|min:8|confirmed',
             'plan_id' => 'required|exists:App\Models\Plan,id',
         ], [
             'slug.regex' => 'Le sous-domaine ne peut contenir que des lettres minuscules, chiffres et tirets.',
             'slug.unique' => 'Ce sous-domaine est deja pris.',
             'password.confirmed' => 'Les mots de passe ne correspondent pas.',
+            'phone.required' => 'Le numero de telephone est obligatoire.',
         ]);
 
         $service = new TenantService();
@@ -41,13 +43,14 @@ class TenantRegistrationController extends Controller
                 'slug' => $request->slug,
                 'admin_email' => $request->admin_email,
                 'admin_name' => $request->admin_name,
+                'admin_phone' => $request->phone,
                 'plan_id' => $request->plan_id,
                 'admin_password' => $request->password,
             ]);
 
             $tenantUrl = 'https://' . $tenant->slug . '.' . config('app.base_domain') . '/login';
 
-            return redirect()->back()->with('success', 'Votre compte a ete cree avec succes ! Connectez-vous sur: ' . $tenantUrl)
+            return redirect()->back()->with('success', 'Votre compte a ete cree avec succes !')
                 ->with('tenant_url', $tenantUrl);
 
         } catch (\Exception $e) {

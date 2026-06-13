@@ -139,7 +139,15 @@ Vue.config.productionTip = true;
 Vue.config.silent = true;
 Vue.config.devtools = false;
 
+import tenantImageMixin from './mixins/tenantImageMixin';
+Vue.mixin(tenantImageMixin);
+
 import { loadI18n } from './plugins/i18n.loader';
+
+function hideSpinner() {
+  const el = document.getElementById('loading_wrap');
+  if (el) el.style.display = 'none';
+}
 
 loadI18n().then(i18n => {
  store.commit('SetDefaultLanguage', { i18n, Language: i18n.locale });
@@ -151,7 +159,11 @@ loadI18n().then(i18n => {
     VueCookie,
     i18n, // vue-i18n will inject $i18n to all components
     render: h => h(App),
+    mounted() { hideSpinner(); },
   }).$mount("#app");
+}).catch(error => {
+  hideSpinner();
+  console.error('Application bootstrap failed.', error);
 });
 
   

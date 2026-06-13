@@ -12,6 +12,7 @@ use App\Models\Warehouse;
 use App\Models\UserWarehouse;
 use App\Models\sms_gateway;
 use File;
+use App\utils\TenantStorage;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use Intervention\Image\ImageManagerStatic as Image;
@@ -29,19 +30,19 @@ class SettingsController extends Controller
 
         $setting = Setting::findOrFail($id);
         $currentAvatar = $setting->logo;
-        if ($request->logo != $currentAvatar) {
+        $image = $request->file('logo');
 
-            $image = $request->file('logo');
-            $path = public_path() . '/images';
-            $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+        if ($image) {
+            $path = TenantStorage::savePath('');
+            $filename = TenantStorage::safeFilename($image);
 
             $image_resize = Image::make($image->getRealPath());
             $image_resize->resize(80, 80);
-            $image_resize->save(public_path('/images/' . $filename));
+            $image_resize->save($path . '/' . $filename);
 
-            $userPhoto = $path . '/' . $currentAvatar;
-            if (file_exists($userPhoto)) {
-                if ($setting->logo != 'logo-default.png') {
+            if (!TenantStorage::isDefaultImage($currentAvatar)) {
+                $userPhoto = TenantStorage::resolveFilePath('', $currentAvatar);
+                if (file_exists($userPhoto)) {
                     @unlink($userPhoto);
                 }
             }
@@ -118,8 +119,7 @@ class SettingsController extends Controller
          // Set selected language as default
         $language = Language::where('locale', $default_language)->first();
 
-        // Skip if already default
-        if (!$language->is_default) {
+        if ($language && !$language->is_default) {
             // Set this one as default
             $language->update(['is_default' => true]);
 
@@ -385,14 +385,14 @@ class SettingsController extends Controller
         // Handle Logo Upload
         if ($request->hasFile('logo') && $request->file('logo') != $currentLogo) {
             $logo = $request->file('logo');
-            $logoFilename = rand(11111111, 99999999) . $logo->getClientOriginalName();
-            $logoPath = public_path('/images/' . $logoFilename);
+            $logoFilename = TenantStorage::safeFilename($logo);
+            $logoPath = TenantStorage::savePath('') . '/' . $logoFilename;
 
             $imageResize = Image::make($logo->getRealPath())->resize(80, 80);
             $imageResize->save($logoPath);
 
-            if ($currentLogo && $currentLogo != 'logo-default.png') {
-                $oldLogoPath = public_path('/images/' . $currentLogo);
+            if ($currentLogo && !TenantStorage::isDefaultImage($currentLogo)) {
+                $oldLogoPath = TenantStorage::resolveFilePath('', $currentLogo);
                 if (file_exists($oldLogoPath)) {
                     @unlink($oldLogoPath);
                 }
@@ -406,11 +406,11 @@ class SettingsController extends Controller
 
             if (in_array($extension, ['ico', 'png'])) {
                 $faviconFilename = uniqid() . '.' . $extension;
-                $favicon->move(public_path('images'), $faviconFilename);
+                $favicon->move(TenantStorage::savePath(''), $faviconFilename);
 
                 // Delete old favicon if it exists and is not default
-                if ($currentFavicon && $currentFavicon !== 'favicon.ico') {
-                    $oldFaviconPath = public_path('images/' . $currentFavicon);
+                if ($currentFavicon && !TenantStorage::isDefaultImage($currentFavicon)) {
+                    $oldFaviconPath = TenantStorage::resolveFilePath('', $currentFavicon);
                     if (file_exists($oldFaviconPath)) {
                         @unlink($oldFaviconPath);
                     }

@@ -986,5 +986,17 @@ return [
 'Sale_Purchase_Ref' =>'Réf. vente/achat',
 'Reference' =>'Référence',
 
+// Pricing & client types
+'WholesalePrice' =>'Prix de gros (revendeurs)',
+'RetailPrice' =>'Prix de détail (clients)',
+'Enter_Wholesale_Price' =>'Entrez le prix de gros',
+'Enter_Retail_Price' =>'Entrez le prix de détail',
+'ExpiryDate' =>'Date d\'expiration',
+'InitialStock' =>'Stock initial',
+'ClientType' =>'Type de client',
+'Retail_Client' =>'Client (détail)',
+'Wholesale_Reseller' =>'Revendeur (gros)',
+'field_must_be_in_csv_or_excel_format' =>'Le fichier doit être au format CSV ou Excel',
+
 
 ];

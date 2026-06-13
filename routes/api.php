@@ -49,7 +49,14 @@ Route::get('/translations/{locale}', function ($locale) {
  Route::get('/languages', 'LanguageController@load_language');
 
 Route::middleware(['auth:api', 'Is_Active'])->group(function () {
-    
+
+    Route::get('/tenant/features', function () {
+        $tenant = app()->bound('tenant') ? app('tenant') : null;
+        return response()->json([
+            'features' => $tenant ? ($tenant->features ?? []) : [],
+        ]);
+    });
+
     Route::get("dashboard_data", "DashboardController@dashboard_data");
     
     Route::get('/retrieve-customer', 'StripeController@retrieveCustomer');

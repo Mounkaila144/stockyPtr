@@ -93,7 +93,7 @@ class UnitsController extends BaseController
             $operator_value = $request->operator_value;
         }
 
-        Unit::create([
+        $unit = Unit::create([
             'name' => $request['name'],
             'ShortName' => $request['ShortName'],
             'base_unit' => $request['base_unit'],
@@ -101,7 +101,7 @@ class UnitsController extends BaseController
             'operator_value' => $operator_value,
         ]);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'id' => $unit->id]);
 
     }
 

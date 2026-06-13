@@ -1,11 +1,11 @@
 $solid-colors: (
-  "blue": #3b82f6,
+  "blue": #2596be,
   "midnight-blue": #0c0c3c,
-  "indigo": #6366f1,
-  "dark-purple": #322740,
-  "purple": #8b5cf6,
+  "indigo": #1a7a9e,
+  "dark-purple": #0d3b4d,
+  "purple": #2596be,
   "pink": #ec4899,
-  "red": #ef4444,
+  "red": #e63946,
   "orange": #f97316,
   "yellow": #f59e0b,
   "green": #10b981,
@@ -18,8 +18,8 @@ $solid-colors: (
 // Gradient colors
 $gradient-colors: (
   gradient-purple-indigo: (
-    "start-color": #8b5cf6,
-    "end-color": #33214b,
+    "start-color": #2596be,
+    "end-color": #0d3b4d,
   ),
   gradient-black-blue: (
     "start-color": #004e92,

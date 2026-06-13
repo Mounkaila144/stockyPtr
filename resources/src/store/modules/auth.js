@@ -15,6 +15,7 @@ const state = {
     Default_Language: 'en',
     show_language: 1,
     availableLanguages: [],
+    tenantFeatures: {},
 };
 
 const getters = {
@@ -28,6 +29,8 @@ const getters = {
     show_language: state => state.show_language,
     error: state => state.error,
     getAvailableLanguages: state => state.availableLanguages,
+    tenantFeatures: state => state.tenantFeatures || {},
+    hasTenantFeature: state => key => !!(state.tenantFeatures && state.tenantFeatures[key]),
 
 };
 
@@ -69,12 +72,16 @@ const mutations = {
     setAvailableLanguages(state, languages) {
         state.availableLanguages = languages;
     },
+    setTenantFeatures(state, features) {
+        state.tenantFeatures = features || {};
+    },
     logout(state) {
         state.user = null;
         state.Permissions = null;
         state.allmodules = null;
         state.loading = false;
         state.error = null;
+        state.tenantFeatures = {};
     },
 };
 
@@ -82,7 +89,7 @@ const actions = {
     async refreshUserPermissions({ commit }, i18n) {
         try {
             const userAuth = await axios.get("get_user_auth");
-            const { permissions, ModulesEnabled, user, notifs } = userAuth.data;
+            const { permissions, ModulesEnabled, user, notifs, tenantFeatures } = userAuth.data;
 
             commit('setPermissions', permissions);
             commit('setallmodules', ModulesEnabled);
@@ -90,6 +97,7 @@ const actions = {
             commit('Notifs_alert', notifs);
             commit('show_language', user.show_language);
             commit('SetDefaultLanguage', { i18n, Language: user.default_language || 'en' });
+            commit('setTenantFeatures', tenantFeatures || {});
 
         } catch (error) {
             commit('setPermissions', null);
@@ -98,12 +106,13 @@ const actions = {
             commit('Notifs_alert', null);
             commit('show_language', null);
             commit('SetDefaultLanguage', { i18n, Language: 'en' });
+            commit('setTenantFeatures', {});
         }
     },
 
      async loadAvailableLanguages({ commit }) {
         try {
-            const response = await axios.get("/languages"); // must return: [{ name, locale, flag }]
+            const response = await axios.get("languages"); // must return: [{ name, locale, flag }]
             commit('setAvailableLanguages', response.data);
         } catch (error) {
             console.warn("⚠️ Failed to load languages:", error);

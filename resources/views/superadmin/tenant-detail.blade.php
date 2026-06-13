@@ -43,6 +43,22 @@
         .btn-back { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-300); }
         .btn:hover { opacity: 0.8; }
         .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9rem; background: var(--green-50); border: 1px solid #a7f3d0; color: #065f46; }
+        .plan-form { display: flex; align-items: center; gap: 12px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--gray-200); }
+        .plan-form label { font-size: 0.9rem; font-weight: 600; color: var(--gray-700); white-space: nowrap; }
+        .plan-form select {
+            padding: 8px 14px; border-radius: 8px; border: 1px solid var(--gray-300);
+            font-size: 0.9rem; font-family: inherit; color: var(--gray-800);
+            background: var(--white); cursor: pointer; min-width: 200px;
+        }
+        .plan-form select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .btn-plan { background: var(--primary); color: var(--white); border: none; }
+        .btn-plan:hover { background: #1d4ed8; }
+        .features-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+        .feature-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--gray-50); }
+        .feature-item input[type="checkbox"] { margin-top: 3px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+        .feature-item .feature-info { flex: 1; }
+        .feature-item .feature-label { font-size: 0.95rem; font-weight: 600; color: var(--gray-900); display: block; cursor: pointer; }
+        .feature-item .feature-desc { font-size: 0.85rem; color: var(--gray-500); margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -104,6 +120,39 @@
                     <div class="value">{{ $tenant->trial_ends_at ? $tenant->trial_ends_at->format('d/m/Y') : '-' }}</div>
                 </div>
             </div>
+
+            <form method="POST" action="{{ route('superadmin.tenant.changePlan', $tenant->id) }}" class="plan-form">
+                @csrf
+                <label for="plan_id">Changer de plan :</label>
+                <select name="plan_id" id="plan_id">
+                    @foreach($plans as $plan)
+                        <option value="{{ $plan->id }}" {{ $tenant->plan_id == $plan->id ? 'selected' : '' }}>
+                            {{ $plan->name }} - {{ number_format($plan->price, 0, ',', ' ') }} FCFA/mois
+                            ({{ $plan->max_users ?: 'Illimite' }} users, {{ $plan->max_warehouses ?: 'Illimite' }} entrepots)
+                        </option>
+                    @endforeach
+                </select>
+                <button type="submit" class="btn btn-plan">Appliquer</button>
+            </form>
+
+            @if(!empty($featureFlags))
+                <form method="POST" action="{{ route('superadmin.tenant.features.update', $tenant->id) }}" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--gray-200);">
+                    @csrf
+                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--gray-900); margin-bottom: 16px;">Fonctionnalites specifiques</h3>
+                    <div class="features-list">
+                        @foreach($featureFlags as $key => $flag)
+                            <label class="feature-item" for="feature_{{ $key }}">
+                                <input type="checkbox" id="feature_{{ $key }}" name="features[{{ $key }}]" value="1" {{ $tenant->hasFeature($key) ? 'checked' : '' }}>
+                                <div class="feature-info">
+                                    <span class="feature-label">{{ $flag['label'] }}</span>
+                                    <div class="feature-desc">{{ $flag['description'] }}</div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <button type="submit" class="btn btn-plan">Enregistrer les fonctionnalites</button>
+                </form>
+            @endif
 
             <div class="actions">
                 <a href="{{ route('superadmin.dashboard') }}" class="btn btn-back">Retour</a>

@@ -144,10 +144,17 @@ class TransferController extends BaseController
 
             foreach ($data as $key => $value) {
                
-                $unit = Unit::where('id', $value['purchase_unit_id'])->first();
+                $purchase_unit_id = $value['purchase_unit_id'] ?? null;
+                if (!$purchase_unit_id) {
+                    $product = Product::find($value['product_id']);
+                    if ($product) {
+                        $purchase_unit_id = $product->unit_purchase_id ?? $product->unit_id ?? null;
+                    }
+                }
+                $unit = $purchase_unit_id ? Unit::where('id', $purchase_unit_id)->first() : null;
 
                 if ($request->transfer['statut'] == "completed") {
-                    if ($value['product_variant_id'] !== null) {
+                    if (($value['product_variant_id'] ?? null) !== null) {
 
                         //--------- eliminate the quantity ''from_warehouse''--------------\\
                         $product_warehouse_from = product_warehouse::where('deleted_at', '=', null)
@@ -250,14 +257,14 @@ class TransferController extends BaseController
 
                 $orderDetails['transfer_id'] = $order->id;
                 $orderDetails['quantity'] = $value['quantity'];
-                $orderDetails['purchase_unit_id'] = $value['purchase_unit_id'];
+                $orderDetails['purchase_unit_id'] = $purchase_unit_id;
                 $orderDetails['product_id'] = $value['product_id'];
-                $orderDetails['product_variant_id'] = $value['product_variant_id'];
+                $orderDetails['product_variant_id'] = $value['product_variant_id'] ?? null;
                 $orderDetails['cost'] = $value['Unit_cost'];
-                $orderDetails['TaxNet'] = $value['tax_percent'];
-                $orderDetails['tax_method'] = $value['tax_method'];
-                $orderDetails['discount'] = $value['discount'];
-                $orderDetails['discount_method'] = $value['discount_Method'];
+                $orderDetails['TaxNet'] = $value['tax_percent'] ?? 0;
+                $orderDetails['tax_method'] = $value['tax_method'] ?? '1';
+                $orderDetails['discount'] = $value['discount'] ?? 0;
+                $orderDetails['discount_method'] = $value['discount_Method'] ?? '2';
                 $orderDetails['total'] = $value['subtotal'];
 
                 TransferDetail::insert($orderDetails);
@@ -426,9 +433,9 @@ class TransferController extends BaseController
             foreach ($data as $key => $product_detail) {
 
                 if($product_detail['no_unit'] !== 0){
-                    $unit = Unit::where('id', $product_detail['purchase_unit_id'])->first();
+                    $unit = Unit::where('id', $product_detail['purchase_unit_id'] ?? null)->first();
                     if ($Trans['statut'] == "completed") {
-                        if ($product_detail['product_variant_id'] !== null) {
+                        if (($product_detail['product_variant_id'] ?? null) !== null) {
 
                             //--------- eliminate the quantity ''from_warehouse''--------------\\
                             $product_warehouse_from = product_warehouse::where('deleted_at', '=', null)
@@ -531,14 +538,14 @@ class TransferController extends BaseController
 
                     $TransDetail['transfer_id'] = $id;
                     $TransDetail['quantity'] = $product_detail['quantity'];
-                    $TransDetail['purchase_unit_id'] = $product_detail['purchase_unit_id'];
+                    $TransDetail['purchase_unit_id'] = $product_detail['purchase_unit_id'] ?? null;
                     $TransDetail['product_id'] = $product_detail['product_id'];
-                    $TransDetail['product_variant_id'] = $product_detail['product_variant_id'];
+                    $TransDetail['product_variant_id'] = $product_detail['product_variant_id'] ?? null;
                     $TransDetail['cost'] = $product_detail['Unit_cost'];
-                    $TransDetail['TaxNet'] = $product_detail['tax_percent'];
-                    $TransDetail['tax_method'] = $product_detail['tax_method'];
-                    $TransDetail['discount'] = $product_detail['discount'];
-                    $TransDetail['discount_method'] = $product_detail['discount_Method'];
+                    $TransDetail['TaxNet'] = $product_detail['tax_percent'] ?? 0;
+                    $TransDetail['tax_method'] = $product_detail['tax_method'] ?? '1';
+                    $TransDetail['discount'] = $product_detail['discount'] ?? 0;
+                    $TransDetail['discount_method'] = $product_detail['discount_Method'] ?? '2';
                     $TransDetail['total'] = $product_detail['subtotal'];
 
                     if (!in_array($product_detail['id'], $old_products_id)) {

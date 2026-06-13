@@ -57,7 +57,38 @@ class SuperAdminController extends Controller
     public function show($id)
     {
         $tenant = Tenant::with('plan')->findOrFail($id);
-        return view('superadmin.tenant-detail', compact('tenant'));
+        $plans = Plan::where('is_active', true)->get();
+        $featureFlags = config('tenant_features.flags', []);
+        return view('superadmin.tenant-detail', compact('tenant', 'plans', 'featureFlags'));
+    }
+
+    public function updateTenantFeatures(Request $request, $id)
+    {
+        $tenant = Tenant::findOrFail($id);
+        $availableFlags = array_keys(config('tenant_features.flags', []));
+        $submitted = $request->input('features', []);
+
+        $features = [];
+        foreach ($availableFlags as $key) {
+            $features[$key] = !empty($submitted[$key]);
+        }
+
+        $tenant->update(['features' => $features]);
+
+        return back()->with('success', "Fonctionnalites du tenant '{$tenant->name}' mises a jour.");
+    }
+
+    public function changePlan(Request $request, $id)
+    {
+        $request->validate([
+            'plan_id' => 'required|exists:App\Models\Plan,id',
+        ]);
+
+        $tenant = Tenant::findOrFail($id);
+        $plan = Plan::findOrFail($request->plan_id);
+        $tenant->update(['plan_id' => $plan->id]);
+
+        return back()->with('success', "Plan du tenant '{$tenant->name}' change vers '{$plan->name}'.");
     }
 
     public function activate($id)
@@ -85,5 +116,41 @@ class SuperAdminController extends Controller
         $service->deleteTenant($tenant);
 
         return redirect()->route('superadmin.dashboard')->with('success', "Tenant '{$tenant->name}' supprime.");
+    }
+
+    public function plans()
+    {
+        $plans = Plan::withCount('tenants')->get();
+        return view('superadmin.plans', compact('plans'));
+    }
+
+    public function editFeatures($id)
+    {
+        $plan = Plan::findOrFail($id);
+        $modules = config('plan_modules.modules', []);
+        $enabledModules = $plan->features ?? [];
+        if (is_string($enabledModules)) {
+            $enabledModules = json_decode($enabledModules, true) ?? [];
+        }
+
+        // Handle old format (associative array)
+        if (!empty($enabledModules) && is_array($enabledModules) && !array_is_list($enabledModules)) {
+            $enabledModules = array_keys(array_filter($enabledModules));
+        }
+
+        return view('superadmin.plan-features', compact('plan', 'modules', 'enabledModules'));
+    }
+
+    public function updateFeatures(Request $request, $id)
+    {
+        $plan = Plan::findOrFail($id);
+        $allModuleKeys = array_keys(config('plan_modules.modules', []));
+
+        $enabledModules = array_values(array_intersect($request->input('modules', []), $allModuleKeys));
+
+        $plan->update(['features' => $enabledModules]);
+
+        return redirect()->route('superadmin.plans.features', $plan->id)
+            ->with('success', "Modules du plan '{$plan->name}' mis a jour avec succes.");
     }
 }

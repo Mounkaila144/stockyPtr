@@ -18,9 +18,25 @@ class Plan extends Model
         'max_users' => 'integer',
         'max_warehouses' => 'integer',
         'max_products' => 'integer',
-        'features' => 'array',
         'is_active' => 'boolean',
     ];
+
+    public function getFeaturesAttribute($value)
+    {
+        $decoded = is_string($value) ? json_decode($value, true) : $value;
+
+        // Handle double-encoded JSON
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true);
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    public function setFeaturesAttribute($value)
+    {
+        $this->attributes['features'] = is_string($value) ? $value : json_encode($value);
+    }
 
     public function tenants()
     {

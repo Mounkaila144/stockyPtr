@@ -987,5 +987,17 @@ return [
 'Sale_Purchase_Ref'=>'Sale/Purchase Ref',
 'Reference'=>'Reference',
 
+// Pricing & client types
+'WholesalePrice'=>'Wholesale price (resellers)',
+'RetailPrice'=>'Retail price (customers)',
+'Enter_Wholesale_Price'=>'Enter the wholesale price',
+'Enter_Retail_Price'=>'Enter the retail price',
+'ExpiryDate'=>'Expiry date',
+'InitialStock'=>'Initial stock',
+'ClientType'=>'Client type',
+'Retail_Client'=>'Retail customer',
+'Wholesale_Reseller'=>'Wholesale reseller',
+'field_must_be_in_csv_or_excel_format'=>'File must be in CSV or Excel format',
+
 
 ];

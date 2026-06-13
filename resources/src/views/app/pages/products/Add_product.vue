@@ -316,10 +316,10 @@
                 <b-col md="6" class="mb-2" v-if="product.type == 'is_single'  || product.type == 'is_combo'">
                   <validation-provider
                     name="Product Cost"
-                    :rules="{ required: true , regex: /^\d*\.?\d*$/}"
+                    :rules="{ required: !pricesOptional , regex: /^\d*\.?\d*$/}"
                     v-slot="validationContext"
                   >
-                    <b-form-group :label="$t('ProductCost') + ' ' + '*'">
+                    <b-form-group :label="$t('ProductCost') + (pricesOptional ? '' : ' *')">
                       <b-form-input
                         :state="getValidationState(validationContext)"
                         aria-describedby="ProductCost-feedback"
@@ -334,31 +334,75 @@
                   </validation-provider>
                 </b-col>
 
-                <!-- Product Price -->
+                <!-- Product Price (hidden default; mirrors Retail price for backend compat) -->
+                <b-col md="6" class="mb-2 d-none" v-if="product.type == 'is_single' || product.type == 'is_service' || product.type == 'is_combo'">
+                  <b-form-input v-model="product.price"></b-form-input>
+                </b-col>
+
+                <!-- Retail Price (for clients - small quantities) -->
                 <b-col
                   md="6"
                   class="mb-2"
                   v-if="product.type == 'is_single' || product.type == 'is_service' || product.type == 'is_combo'"
                 >
                   <validation-provider
-                    name="Product Price"
-                    :rules="{ required: true , regex: /^\d*\.?\d*$/}"
+                    name="Retail Price"
+                    :rules="{ required: !pricesOptional , regex: /^\d*\.?\d*$/ }"
                     v-slot="validationContext"
                   >
-                    <b-form-group :label="$t('ProductPrice') + ' ' + '*'">
+                    <b-form-group :label="$t('RetailPrice') + (pricesOptional ? '' : ' *')">
                       <b-form-input
                         :state="getValidationState(validationContext)"
-                        aria-describedby="ProductPrice-feedback"
-                        label="Price"
-                        :placeholder="$t('Enter_Product_Price')"
-                        v-model="product.price"
+                        aria-describedby="RetailPrice-feedback"
+                        label="Retail Price"
+                        :placeholder="$t('Enter_Retail_Price')"
+                        v-model="product.price_retail"
                       ></b-form-input>
-
                       <b-form-invalid-feedback
-                        id="ProductPrice-feedback"
+                        id="RetailPrice-feedback"
                       >{{ validationContext.errors[0] }}</b-form-invalid-feedback>
                     </b-form-group>
                   </validation-provider>
+                </b-col>
+
+                <!-- Wholesale Price (for resellers - large quantities) -->
+                <b-col
+                  md="6"
+                  class="mb-2"
+                  v-if="product.type == 'is_single' || product.type == 'is_service' || product.type == 'is_combo'"
+                >
+                  <validation-provider
+                    name="Wholesale Price"
+                    :rules="{ regex: /^\d*\.?\d*$/ }"
+                    v-slot="validationContext"
+                  >
+                    <b-form-group :label="$t('WholesalePrice')">
+                      <b-form-input
+                        :state="getValidationState(validationContext)"
+                        aria-describedby="WholesalePrice-feedback"
+                        label="Wholesale Price"
+                        :placeholder="$t('Enter_Wholesale_Price')"
+                        v-model="product.price_wholesale"
+                      ></b-form-input>
+                      <b-form-invalid-feedback
+                        id="WholesalePrice-feedback"
+                      >{{ validationContext.errors[0] }}</b-form-invalid-feedback>
+                    </b-form-group>
+                  </validation-provider>
+                </b-col>
+
+                <!-- Expiry Date -->
+                <b-col
+                  md="6"
+                  class="mb-2"
+                  v-if="product.type != 'is_variant'"
+                >
+                  <b-form-group :label="$t('ExpiryDate')">
+                    <b-form-input
+                      type="date"
+                      v-model="product.expiry_date"
+                    ></b-form-input>
+                  </b-form-group>
                 </b-col>
 
                 <!-- Unit Product -->
@@ -503,10 +547,10 @@
                             <input required  class="form-control" v-model="variant.text">
                           </td>
                           <td>
-                            <input required class="form-control" v-model="variant.cost">
+                            <input :required="!pricesOptional" class="form-control" v-model="variant.cost">
                           </td>
                           <td>
-                            <input required class="form-control" v-model="variant.price">
+                            <input :required="!pricesOptional" class="form-control" v-model="variant.price">
                           </td>
                           <td>
                             <a
@@ -870,6 +914,9 @@ export default {
         Type_barcode: "CODE128",
         cost: "",
         price: "",
+        price_wholesale: "",
+        price_retail: "",
+        expiry_date: "",
         brand_id: "",
         category_id: "",
         TaxNet: "0",
@@ -914,11 +961,21 @@ export default {
   },
 
   computed: {
-    ...mapGetters(["currentUserPermissions","currentUser"]),
+    ...mapGetters(["currentUserPermissions","currentUser","tenantFeatures"]),
+    pricesOptional() {
+      return !!(this.tenantFeatures && this.tenantFeatures.prices_optional);
+    },
     totalCost() {
       return this.materiels.reduce((total, materiel) => {
         return total + (materiel.cost * materiel.quantity);
       }, 0);
+    }
+  },
+
+  watch: {
+    // Keep the legacy `price` field in sync with Retail price so the backend keeps working.
+    "product.price_retail": function(val) {
+      this.product.price = val;
     }
   },
 
@@ -1329,7 +1386,7 @@ export default {
           this.CategorySubmitProcessing = false;
           // Ajouter la nouvelle catégorie à la liste locale
           const newCat = {
-            id: response.data.id || Date.now(), // Utiliser un ID temporaire si non fourni
+            id: response.data.id,
             name: this.newCategory.name,
             code: this.newCategory.code
           };
@@ -1420,17 +1477,13 @@ export default {
           this.UnitSubmitProcessing = false;
           // Ajouter la nouvelle unité à la liste locale
           const newUnitData = {
-            id: response.data.id || Date.now(), // Utiliser un ID temporaire si non fourni
+            id: response.data.id,
             name: this.newUnit.name,
             ShortName: this.newUnit.ShortName
           };
+          // Ajouter aux listes sans changer la sélection en cours
           this.units.push(newUnitData);
-
-          // Sélectionner automatiquement la nouvelle unité
-          this.product.unit_id = newUnitData.id;
-
-          // Mettre à jour les unités de vente et d'achat
-          this.Selected_Unit(newUnitData.id);
+          this.units_sub.push(newUnitData);
 
           // Fermer la modal
           this.$bvModal.hide("New_Unit");

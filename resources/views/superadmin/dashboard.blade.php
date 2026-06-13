@@ -83,6 +83,8 @@
     <div class="topbar">
         <h1>StockyPTR - Super Admin</h1>
         <div class="actions">
+            <a href="{{ route('superadmin.dashboard') }}" style="color: var(--white); font-weight: 600;">Tenants</a>
+            <a href="{{ route('superadmin.plans') }}">Plans</a>
             <a href="/">Voir le site</a>
             <form method="POST" action="{{ route('superadmin.logout') }}" style="display:inline">
                 @csrf

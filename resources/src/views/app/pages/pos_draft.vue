@@ -9,7 +9,7 @@
             <div class="main-header">
               <div class="logo">
                 <router-link to="/app/dashboard">
-                  <img :src="'/images/'+currentUser.logo" alt width="60" height="60">
+                  <img src="/logow.png" alt="Wuroobiz" style="max-height:50px; width:auto;">
                 </router-link>
               </div>
               <div class="mx-auto"></div>
@@ -144,7 +144,7 @@
                   >
                     <template slot="button-content">
                       <img
-                        :src="'/images/avatar/'+currentUser.avatar"
+                        :src="imagePath('avatar', currentUser.avatar)"
                         id="userDropdown"
                         alt
                         data-toggle="dropdown"
@@ -589,7 +589,7 @@
                   class="card o-hidden bd-highlight m-1"
                 >
                   <div class="list-thumb d-flex">
-                    <img alt :src="'/images/products/'+product.image">
+                    <img alt :src="imagePath('products', product.image)">
                   </div>
                   <div class="flex-grow-1 d-bock">
                     <div
@@ -650,7 +650,7 @@
                   class="card o-hidden bd-highlight m-1"
                 >
                   <div class="list-thumb d-flex">
-                    <img alt :src="'/images/no-image.png'">
+                    <img alt :src="imagePath('', 'no-image.png')">
                   </div>
                   <div class="flex-grow-1 d-bock">
                     <div
@@ -667,7 +667,7 @@
                   @click="Products_by_Brands(brand.id)"
                   :class="{ 'brand-Active' : brand.id === brand_id}"
                 >
-                  <img alt :src="'/images/brands/'+brand.image">
+                  <img alt :src="imagePath('brands', brand.image)">
                   <div class="flex-grow-1 d-bock">
                     <div
                       class="card-body align-self-center d-flex flex-column justify-content-between align-items-lg-center"
@@ -720,7 +720,7 @@
                   class="card o-hidden bd-highlight m-1"
                 >
                   <div class="list-thumb d-flex">
-                    <img alt :src="'/images/no-image.png'">
+                    <img alt :src="imagePath('', 'no-image.png')">
                   </div>
                   <div class="flex-grow-1 d-bock">
                     <div
@@ -737,7 +737,7 @@
                   @click="Products_by_Category(category.id)"
                   :class="{ 'brand-Active' : category.id === category_id}"
                 >
-                  <img alt :src="'/images/no-image.png'">
+                  <img alt :src="imagePath('', 'no-image.png')">
                   <div class="flex-grow-1 d-bock">
                     <div
                       class="card-body align-self-center d-flex flex-column justify-content-between align-items-lg-center"
@@ -779,7 +779,7 @@
             <div style="max-width:400px;margin:0px auto">
               <div class="info">
                 <div class="invoice_logo text-center mb-2">
-                  <img :src="'/images/'+invoice_pos.setting.logo" alt width="60" height="60">
+                  <img :src="imagePath('', invoice_pos.setting.logo)" alt width="60" height="60">
                 </div>
                 <p>
                   <span>{{$t('date')}} : {{invoice_pos.sale.date}} <br></span>
@@ -2112,20 +2112,34 @@ export default {
     },
     //------------------------------ Print -------------------------\\
     print_pos() {
-      var divContents = document.getElementById("invoice-POS").innerHTML;
-      var a = window.open("", "", "height=500, width=500");
-      a.document.write(
-        '<link rel="stylesheet" href="/css/pos_print.css"><html>'
-      );
-      a.document.write("<body >");
-      a.document.write(divContents);
-      a.document.write("</body></html>");
-      a.document.close();
+      var divContents = document.getElementById("invoice-POS");
+      if (!divContents) return;
+      divContents = divContents.innerHTML;
 
+      // Use a hidden iframe instead of window.open to avoid cross-window blocking
+      var iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-10000px';
+      iframe.style.left = '-10000px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      document.body.appendChild(iframe);
+
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write('<html><head>');
+      doc.write('<link rel="stylesheet" href="/css/pos_print.css">');
+      doc.write('</head><body>');
+      doc.write(divContents);
+      doc.write('</body></html>');
+      doc.close();
+
+      // Wait for CSS to load, then print and remove iframe
       setTimeout(() => {
-         a.print();
-      }, 1000);
-
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        document.body.removeChild(iframe);
+      }, 500);
     },
     //-------------------------------- Invoice POS ------------------------------\\
     Invoice_POS(id) {
@@ -2138,19 +2152,21 @@ export default {
           this.invoice_pos = response.data;
           this.payments = response.data.payments;
           this.pos_settings = response.data.pos_settings;
-          setTimeout(() => {
-              // Complete the animation of the  progress bar.
-            NProgress.done();
-            this.$bvModal.show("Show_invoice");
-          }, 500);
 
+          // Show invoice modal first
+          NProgress.done();
+          this.$bvModal.show("Show_invoice");
+
+          // Auto-print after modal is fully rendered
           if(response.data.pos_settings.is_printable){
-            setTimeout(() => this.print_pos(), 1000);
+            this.$nextTick(() => {
+              setTimeout(() => this.print_pos(), 500);
+            });
           }
         })
         .catch(() => {
           // Complete the animation of the  progress bar.
-          setTimeout(() => NProgress.done(), 500);
+          NProgress.done();
         });
 
         //  Add a setTimeout here

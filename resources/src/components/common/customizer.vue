@@ -49,7 +49,7 @@
 
                 <a v-for="lang in getAvailableLanguages" :key="lang.locale" @click="SetLocal(lang.locale)">
                   <img
-                    :src="`/flags/${lang.flag}`"
+                    :src="flagPath(lang.flag)"
                     :alt="lang.name"
                     class="flag-icon flag-icon-squared"
                     style="width: 20px; margin-right: 8px"

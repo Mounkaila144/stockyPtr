@@ -404,27 +404,28 @@ export default {
       NProgress.start();
       NProgress.set(0.1);
       var self = this;
-      self.data.append("client", self.setting.client_id);
-      self.data.append("warehouse", self.setting.warehouse_id);
-      self.data.append("currency", self.setting.currency_id);
-      self.data.append("email", self.setting.email);
-      self.data.append("logo", self.setting.logo);
-      self.data.append("CompanyName", self.setting.CompanyName);
-      self.data.append("CompanyPhone", self.setting.CompanyPhone);
-      self.data.append("CompanyAdress", self.setting.CompanyAdress);
-      self.data.append("footer", self.setting.footer);
-      self.data.append("developed_by", self.setting.developed_by);
-      self.data.append("default_language", self.setting.default_language);
-      self.data.append("sms_gateway", self.setting.sms_gateway);
-      self.data.append("is_invoice_footer", self.setting.is_invoice_footer);
-      self.data.append("invoice_footer", self.setting.invoice_footer);
-      self.data.append("quotation_with_stock", self.setting.quotation_with_stock);
-      self.data.append("show_language", self.setting.show_language);
-      self.data.append("timezone", self.setting.timezone);
-      self.data.append("_method", "put");
+      var formData = new FormData();
+      formData.append("client", self.setting.client_id);
+      formData.append("warehouse", self.setting.warehouse_id);
+      formData.append("currency", self.setting.currency_id);
+      formData.append("email", self.setting.email);
+      formData.append("logo", self.setting.logo);
+      formData.append("CompanyName", self.setting.CompanyName);
+      formData.append("CompanyPhone", self.setting.CompanyPhone);
+      formData.append("CompanyAdress", self.setting.CompanyAdress);
+      formData.append("footer", self.setting.footer);
+      formData.append("developed_by", self.setting.developed_by);
+      formData.append("default_language", self.setting.default_language);
+      formData.append("sms_gateway", self.setting.sms_gateway);
+      formData.append("is_invoice_footer", self.setting.is_invoice_footer);
+      formData.append("invoice_footer", self.setting.invoice_footer);
+      formData.append("quotation_with_stock", self.setting.quotation_with_stock);
+      formData.append("show_language", self.setting.show_language);
+      formData.append("timezone", self.setting.timezone);
+      formData.append("_method", "put");
 
       axios
-        .post("settings/" + self.setting.id, self.data)
+        .post("settings/" + self.setting.id, formData)
         .then(response => {
           Fire.$emit("Event_Setting");
           this.makeToast(

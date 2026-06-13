@@ -722,7 +722,7 @@
           <div style="max-width:400px;margin:0px auto">
           <div class="info" >
             <div class="invoice_logo text-center mb-2">
-              <img :src="'/images/'+invoice_pos.setting.logo" alt width="60" height="60">
+              <img :src="imagePath('', invoice_pos.setting.logo)" alt width="60" height="60">
             </div>
             <p>
                 <span>{{$t('date')}} : {{invoice_pos.sale.date}} <br></span>

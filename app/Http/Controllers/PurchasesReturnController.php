@@ -194,20 +194,28 @@ class PurchasesReturnController extends BaseController
 
             $data = $request['details'];
             foreach ($data as $key => $value) {
-                $unit = Unit::where('id', $value['purchase_unit_id'])->first();
+                $purchase_unit_id = $value['purchase_unit_id'] ?? null;
+                if (!$purchase_unit_id) {
+                    $product = Product::find($value['product_id']);
+                    if ($product) {
+                        $purchase_unit_id = $product->unit_purchase_id ?? $product->unit_id ?? null;
+                    }
+                }
+                $unit = $purchase_unit_id ? Unit::where('id', $purchase_unit_id)->first() : null;
+
                 $orderDetails[] = [
                     'purchase_return_id' => $order->id,
                     'quantity' => $value['quantity'],
                     'cost' => $value['Unit_cost'],
-                    'purchase_unit_id' =>  $value['purchase_unit_id'],
-                    'TaxNet' => $value['tax_percent'],
-                    'tax_method' => $value['tax_method'],
-                    'discount' => $value['discount'],
-                    'discount_method' => $value['discount_Method'],
+                    'purchase_unit_id' =>  $purchase_unit_id,
+                    'TaxNet' => $value['tax_percent'] ?? 0,
+                    'tax_method' => $value['tax_method'] ?? '1',
+                    'discount' => $value['discount'] ?? 0,
+                    'discount_method' => $value['discount_Method'] ?? '2',
                     'product_id' => $value['product_id'],
-                    'product_variant_id' => $value['product_variant_id'],
+                    'product_variant_id' => $value['product_variant_id'] ?? null,
                     'total' => $value['subtotal'],
-                    'imei_number' => $value['imei_number'],
+                    'imei_number' => $value['imei_number'] ?? null,
                 ];
 
             
@@ -346,10 +354,10 @@ class PurchasesReturnController extends BaseController
             foreach ($New_Return_Details as $key => $product_detail) {
 
                 if($product_detail['no_unit'] !== 0){
-                    $unit_prod = Unit::where('id', $product_detail['purchase_unit_id'])->first();
+                    $unit_prod = Unit::where('id', $product_detail['purchase_unit_id'] ?? null)->first();
 
                     if ($request->statut == "completed") {
-                        if ($product_detail['product_variant_id'] !== null) {
+                        if (($product_detail['product_variant_id'] ?? null) !== null) {
                             $product_warehouse = product_warehouse::where('deleted_at', '=', null)
                                 ->where('warehouse_id', $request->warehouse_id)
                                 ->where('product_id', $product_detail['product_id'])
@@ -384,16 +392,16 @@ class PurchasesReturnController extends BaseController
 
                     $orderDetails['purchase_return_id'] = $id;
                     $orderDetails['cost'] = $product_detail['Unit_cost'];
-                    $orderDetails['purchase_unit_id'] = $product_detail['purchase_unit_id'];
-                    $orderDetails['TaxNet'] = $product_detail['tax_percent'];
-                    $orderDetails['tax_method'] = $product_detail['tax_method'];
-                    $orderDetails['discount'] = $product_detail['discount'];
-                    $orderDetails['discount_method'] = $product_detail['discount_Method'];
+                    $orderDetails['purchase_unit_id'] = $product_detail['purchase_unit_id'] ?? null;
+                    $orderDetails['TaxNet'] = $product_detail['tax_percent'] ?? 0;
+                    $orderDetails['tax_method'] = $product_detail['tax_method'] ?? '1';
+                    $orderDetails['discount'] = $product_detail['discount'] ?? 0;
+                    $orderDetails['discount_method'] = $product_detail['discount_Method'] ?? '2';
                     $orderDetails['quantity'] = $product_detail['quantity'];
                     $orderDetails['product_id'] = $product_detail['product_id'];
-                    $orderDetails['product_variant_id'] = $product_detail['product_variant_id'];
+                    $orderDetails['product_variant_id'] = $product_detail['product_variant_id'] ?? null;
                     $orderDetails['total'] = $product_detail['subtotal'];
-                    $orderDetails['imei_number'] = $product_detail['imei_number'];
+                    $orderDetails['imei_number'] = $product_detail['imei_number'] ?? null;
 
                     if (!in_array($product_detail['id'], $old_products_id)) {
                         PurchaseReturnDetails::Create($orderDetails);

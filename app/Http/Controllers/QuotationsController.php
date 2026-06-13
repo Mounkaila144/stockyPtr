@@ -179,21 +179,28 @@ class QuotationsController extends BaseController
             $data = $request['details'];
 
             foreach ($data as $key => $value) {
-                $unit = Unit::where('id', $value['sale_unit_id'])->first();
+                $sale_unit_id = $value['sale_unit_id'] ?? null;
+                if (!$sale_unit_id) {
+                    $product = Product::find($value['product_id']);
+                    if ($product) {
+                        $sale_unit_id = $product->unit_sale_id ?? $product->unit_id ?? null;
+                    }
+                }
+                $unit = $sale_unit_id ? Unit::where('id', $sale_unit_id)->first() : null;
 
                 $orderDetails[] = [
                     'quotation_id'       => $order->id,
                     'quantity'           => $value['quantity'],
-                    'sale_unit_id'       => $value['sale_unit_id']?$value['sale_unit_id']:NULL,
+                    'sale_unit_id'       => $sale_unit_id,
                     'price'              => $value['Unit_price'],
-                    'TaxNet'             => $value['tax_percent'],
-                    'tax_method'         => $value['tax_method'],
-                    'discount'           => $value['discount'],
-                    'discount_method'    => $value['discount_Method'],
+                    'TaxNet'             => $value['tax_percent'] ?? 0,
+                    'tax_method'         => $value['tax_method'] ?? '1',
+                    'discount'           => $value['discount'] ?? 0,
+                    'discount_method'    => $value['discount_Method'] ?? '2',
                     'product_id'         => $value['product_id'],
-                    'product_variant_id' => $value['product_variant_id']?$value['product_variant_id']:NULL,
+                    'product_variant_id' => $value['product_variant_id'] ?? null,
                     'total'              => $value['subtotal'],
-                    'imei_number'        => $value['imei_number'],
+                    'imei_number'        => $value['imei_number'] ?? null,
                 ];
             }
             QuotationDetail::insert($orderDetails);
@@ -251,16 +258,16 @@ class QuotationsController extends BaseController
 
                 $QuoteDetail['quotation_id']       = $id;
                 $QuoteDetail['quantity']           = $product_detail['quantity'];
-                $QuoteDetail['sale_unit_id']       = $product_detail['sale_unit_id'];
+                $QuoteDetail['sale_unit_id']       = $product_detail['sale_unit_id'] ?? null;
                 $QuoteDetail['product_id']         = $product_detail['product_id'];
-                $QuoteDetail['product_variant_id'] = $product_detail['product_variant_id'];
+                $QuoteDetail['product_variant_id'] = $product_detail['product_variant_id'] ?? null;
                 $QuoteDetail['price']              = $product_detail['Unit_price'];
-                $QuoteDetail['TaxNet']             = $product_detail['tax_percent'];
-                $QuoteDetail['tax_method']         = $product_detail['tax_method'];
-                $QuoteDetail['discount']           = $product_detail['discount'];
-                $QuoteDetail['discount_method']    = $product_detail['discount_Method'];
+                $QuoteDetail['TaxNet']             = $product_detail['tax_percent'] ?? 0;
+                $QuoteDetail['tax_method']         = $product_detail['tax_method'] ?? '1';
+                $QuoteDetail['discount']           = $product_detail['discount'] ?? 0;
+                $QuoteDetail['discount_method']    = $product_detail['discount_Method'] ?? '2';
                 $QuoteDetail['total']              = $product_detail['subtotal'];
-                $QuoteDetail['imei_number']        = $product_detail['imei_number'];
+                $QuoteDetail['imei_number']        = $product_detail['imei_number'] ?? null;
 
                 if (!in_array($product_detail['id'], $old_detail_id)) {
                     QuotationDetail::Create($QuoteDetail);

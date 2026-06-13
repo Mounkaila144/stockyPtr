@@ -719,6 +719,7 @@ export default {
         shipping: 0,
         discount: 0
       },
+      current_client_type: 'retail',
       timer:null,
       total: 0,
       GrandTotal: 0,
@@ -828,7 +829,49 @@ export default {
       this.card_id='';
       this.is_new_credit_card= false;
       this.submit_showing_credit_card= false;
-      
+
+      // Update active client type, then re-price each line already in the cart
+      const client = this.clients.find(c => c.id === value);
+      this.current_client_type = client && client.client_type ? client.client_type : 'retail';
+      this.Reprice_Cart_For_Client();
+    },
+
+    //----------- Pick wholesale or retail price based on current client type
+    Pick_Price_For_Client(productData) {
+      const type = this.current_client_type || 'retail';
+      let chosen = (type === 'wholesale') ? productData.price_wholesale : productData.price_retail;
+      if (chosen === null || chosen === undefined || chosen === '' || isNaN(parseFloat(chosen))) {
+        chosen = productData.fix_price !== undefined ? productData.fix_price : productData.Unit_price;
+      }
+      return parseFloat(chosen);
+    },
+
+    //----------- Re-apply price for every line when client changes
+    Reprice_Cart_For_Client() {
+      for (var i = 0; i < this.details.length; i++) {
+        var newUnit = this.Pick_Price_For_Client(this.details[i]);
+        if (isNaN(newUnit)) continue;
+        this.details[i].Unit_price = newUnit;
+        var disc = parseFloat(this.details[i].discount) || 0;
+        if (this.details[i].discount_Method == "2") {
+          this.details[i].DiscountNet = disc;
+        } else {
+          this.details[i].DiscountNet = parseFloat((newUnit * disc) / 100);
+        }
+        if (this.details[i].tax_method == "1") {
+          this.details[i].Net_price = parseFloat(newUnit - this.details[i].DiscountNet);
+          this.details[i].taxe = parseFloat((this.details[i].tax_percent * (newUnit - this.details[i].DiscountNet)) / 100);
+          this.details[i].Total_price = parseFloat(this.details[i].Net_price + this.details[i].taxe);
+        } else {
+          this.details[i].taxe = parseFloat((newUnit - this.details[i].DiscountNet) * (this.details[i].tax_percent / 100));
+          this.details[i].Net_price = parseFloat(newUnit - this.details[i].taxe - this.details[i].DiscountNet);
+          this.details[i].Total_price = parseFloat(this.details[i].Net_price + this.details[i].taxe);
+        }
+      }
+      if (typeof this.Calcul_Total === 'function') {
+        this.Calcul_Total();
+      }
+      this.$forceUpdate();
     },
     
 
@@ -1602,9 +1645,25 @@ export default {
         this.product.tax_percent = response.data.tax_percent;
         this.product.unitSale = response.data.unitSale;
         this.product.fix_price = response.data.fix_price;
+        this.product.price_wholesale = response.data.price_wholesale;
+        this.product.price_retail    = response.data.price_retail;
         this.product.sale_unit_id = response.data.sale_unit_id;
         this.product.is_imei = response.data.is_imei;
         this.product.imei_number = '';
+
+        // Override unit price with client-type-specific price (wholesale or retail)
+        var clientUnit = this.Pick_Price_For_Client(this.product);
+        if (!isNaN(clientUnit)) {
+          this.product.Unit_price = clientUnit;
+          if (this.product.tax_method == "1") {
+            this.product.Net_price = clientUnit;
+            this.product.taxe = parseFloat((this.product.tax_percent * clientUnit) / 100);
+          } else {
+            this.product.taxe = parseFloat(clientUnit * (this.product.tax_percent / 100));
+            this.product.Net_price = parseFloat(clientUnit - this.product.taxe);
+          }
+        }
+
         this.add_product();
         this.Calcul_Total();
       });

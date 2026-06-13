@@ -136,7 +136,6 @@
           <button
             @click="print_all_Barcode()"
             value="Print"
-            type="submit"
             class="btn btn-light btn-sm pull-right m-1"
           >
             <i class="i-Billing"></i>
@@ -418,7 +417,12 @@ export default {
     },
     //-------------------------------------- Print Barcode -------------------------\\
     print_all_Barcode() {
-      var divContents = document.getElementById("print_barcode_label").innerHTML;
+      var el = document.getElementById("print_barcode_label");
+      if (!el) {
+        this.makeToast("warning", this.$t("Please_update_the_barcode_before_printing"), this.$t("Warning"));
+        return;
+      }
+      var divContents = el.innerHTML;
       var a = window.open("", "", "height=500, width=500");
       a.document.write(
         '<link rel="stylesheet" href="/assets_setup/css/print_label.css"><html>'

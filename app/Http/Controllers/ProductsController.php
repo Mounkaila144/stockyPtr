@@ -13,6 +13,7 @@ use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Models\CountStock;
 use App\utils\helpers;
+use App\utils\TenantStorage;
 use Carbon\Carbon;
 use DB;
 use Excel;
@@ -30,6 +31,11 @@ use Illuminate\Support\Facades\File;
 
 class ProductsController extends BaseController
 {
+
+    private function pricesOptional()
+    {
+        return app()->bound('tenant') && app('tenant')->hasFeature('prices_optional');
+    }
 
     //------------ Get ALL Products --------------\\
 
@@ -97,6 +103,9 @@ class ProductsController extends BaseController
                 $item['name']  = $product->name;
                 $item['cost']  = number_format($product->cost, 2, '.', ',');
                 $item['price'] = number_format($product->price, 2, '.', ',');
+                $item['price_wholesale'] = $product->price_wholesale !== null ? number_format($product->price_wholesale, 2, '.', ',') : '----';
+                $item['price_retail']    = $product->price_retail    !== null ? number_format($product->price_retail, 2, '.', ',')    : '----';
+                $item['expiry_date']     = $product->expiry_date ? $product->expiry_date->format('Y-m-d') : '----';
                 $item['unit']  = $product['unit']->ShortName;
 
               $product_warehouse_total_qty = product_warehouse::where('product_id', $product->id)
@@ -111,6 +120,9 @@ class ProductsController extends BaseController
                 $item['name']  = $product->name;
                 $item['cost']  = number_format($product->cost, 2, '.', ',');
                 $item['price'] = number_format($product->price, 2, '.', ',');
+                $item['price_wholesale'] = $product->price_wholesale !== null ? number_format($product->price_wholesale, 2, '.', ',') : '----';
+                $item['price_retail']    = $product->price_retail    !== null ? number_format($product->price_retail, 2, '.', ',')    : '----';
+                $item['expiry_date']     = $product->expiry_date ? $product->expiry_date->format('Y-m-d') : '----';
                 $item['unit'] = $product['unit']->ShortName;
 
               $product_warehouse_total_qty = product_warehouse::where('product_id', $product->id)
@@ -130,6 +142,9 @@ class ProductsController extends BaseController
                   $item['cost'] = '';
                   $item['price'] = '';
                   $item['name'] = '';
+                  $item['price_wholesale'] = '----';
+                  $item['price_retail']    = '----';
+                  $item['expiry_date']     = $product->expiry_date ? $product->expiry_date->format('Y-m-d') : '----';
                   $item['unit'] = $product['unit']->ShortName;
 
                   foreach ($product_variant_data as $product_variant) {
@@ -155,6 +170,9 @@ class ProductsController extends BaseController
                   $item['unit'] = '----';
 
                   $item['price'] = number_format($product->price, 2, '.', ',');
+                  $item['price_wholesale'] = $product->price_wholesale !== null ? number_format($product->price_wholesale, 2, '.', ',') : '----';
+                  $item['price_retail']    = $product->price_retail    !== null ? number_format($product->price_retail, 2, '.', ',')    : '----';
+                  $item['expiry_date']     = $product->expiry_date ? $product->expiry_date->format('Y-m-d') : '----';
               }
 
 
@@ -189,7 +207,9 @@ class ProductsController extends BaseController
         $this->authorizeForUser($request->user('api'), 'create', Product::class);
 
         try {
-           
+
+            $pricesOptional = $this->pricesOptional();
+
             // define validation rules for product
             $productRules = [
                 'code'         => [
@@ -208,8 +228,8 @@ class ProductsController extends BaseController
                 'type'         => 'required',
                 'tax_method'   => 'required',
                 'unit_id'      => Rule::requiredIf($request->type != 'is_service'),
-                'cost'         => Rule::requiredIf($request->type == 'is_single' || $request->type == 'is_combo'),
-                'price'        => Rule::requiredIf($request->type != 'is_variant'),
+                'cost'         => Rule::requiredIf(!$pricesOptional && ($request->type == 'is_single' || $request->type == 'is_combo')),
+                'price'        => Rule::requiredIf(!$pricesOptional && $request->type != 'is_variant'),
             ];
 
 
@@ -217,7 +237,7 @@ class ProductsController extends BaseController
             if ($request->type == 'is_variant') {
                 $productRules['variants'] = [
                     'required',
-                    function ($attribute, $value, $fail) use ($request) {
+                    function ($attribute, $value, $fail) use ($request, $pricesOptional) {
                         // check if array is not empty
                         if (empty($value)) {
                             $fail('The variants array is required.');
@@ -235,10 +255,10 @@ class ProductsController extends BaseController
                                 }else if(!array_key_exists('code', $variant) || empty($variant['code'])) {
                                     $fail('Variant code cannot be empty.');
                                     return;
-                                }else if(!array_key_exists('cost', $variant) || empty($variant['cost'])) {
+                                }else if(!$pricesOptional && (!array_key_exists('cost', $variant) || empty($variant['cost']))) {
                                     $fail('Variant cost cannot be empty.');
                                     return;
-                                }else if(!array_key_exists('price', $variant) || empty($variant['price'])) {
+                                }else if(!$pricesOptional && (!array_key_exists('price', $variant) || empty($variant['price']))) {
                                     $fail('Variant price cannot be empty.');
                                     return;
                                 }
@@ -248,7 +268,7 @@ class ProductsController extends BaseController
                             return;
                         }
 
-                       
+
 
                         //check if variant name empty
                         $names = array_column($variants, 'text');
@@ -264,32 +284,34 @@ class ProductsController extends BaseController
                             return;
                         }
 
-                        //check if variant cost empty
-                        $all_cost = array_column($variants, 'cost');
-                        if($all_cost){
-                            foreach ($all_cost as $cost) {
-                                if (empty($cost)) {
-                                    $fail('Variant Cost cannot be empty.');
-                                    return;
+                        if (!$pricesOptional) {
+                            //check if variant cost empty
+                            $all_cost = array_column($variants, 'cost');
+                            if($all_cost){
+                                foreach ($all_cost as $cost) {
+                                    if (empty($cost)) {
+                                        $fail('Variant Cost cannot be empty.');
+                                        return;
+                                    }
                                 }
+                            }else{
+                                $fail('Variant Cost cannot be empty.');
+                                return;
                             }
-                        }else{
-                            $fail('Variant Cost cannot be empty.');
-                            return;
-                        }
 
-                        //check if variant price empty
-                        $all_price = array_column($variants, 'price');
-                        if($all_price){
-                            foreach ($all_price as $price) {
-                                if (empty($price)) {
-                                    $fail('Variant Price cannot be empty.');
-                                    return;
+                            //check if variant price empty
+                            $all_price = array_column($variants, 'price');
+                            if($all_price){
+                                foreach ($all_price as $price) {
+                                    if (empty($price)) {
+                                        $fail('Variant Price cannot be empty.');
+                                        return;
+                                    }
                                 }
+                            }else{
+                                $fail('Variant Price cannot be empty.');
+                                return;
                             }
-                        }else{
-                            $fail('Variant Price cannot be empty.');
-                            return;
                         }
 
                         //check if code empty
@@ -373,8 +395,10 @@ class ProductsController extends BaseController
 
                  //-- check if type is_single
                  if($request['type'] == 'is_single' || $request['type'] == 'is_combo'){
-                    $Product->price = $request['price'];
-                    $Product->cost  = $request['cost'];
+                    $Product->price = $request['price'] ?: 0;
+                    $Product->cost  = $request['cost'] ?: 0;
+                    $Product->price_wholesale = $request['price_wholesale'] !== null && $request['price_wholesale'] !== '' ? $request['price_wholesale'] : null;
+                    $Product->price_retail    = $request['price_retail']    !== null && $request['price_retail']    !== '' ? $request['price_retail']    : null;
 
                     $Product->unit_id = $request['unit_id'];
                     $Product->unit_sale_id = $request['unit_sale_id'] ? $request['unit_sale_id'] : $request['unit_id'];
@@ -401,8 +425,10 @@ class ProductsController extends BaseController
 
                 //-- check if type is_service
                 }else{
-                    $Product->price = $request['price'];
+                    $Product->price = $request['price'] ?: 0;
                     $Product->cost  = 0;
+                    $Product->price_wholesale = $request['price_wholesale'] !== null && $request['price_wholesale'] !== '' ? $request['price_wholesale'] : null;
+                    $Product->price_retail    = $request['price_retail']    !== null && $request['price_retail']    !== '' ? $request['price_retail']    : null;
 
                     $Product->unit_id = NULL;
                     $Product->unit_sale_id = NULL;
@@ -413,7 +439,9 @@ class ProductsController extends BaseController
                     $manage_stock = 0;
 
                 }
-                
+
+                $Product->expiry_date = !empty($request['expiry_date']) ? $request['expiry_date'] : null;
+
                 $Product->is_variant = $request['is_variant'] == 'true' ? 1 : 0;
                 $Product->is_imei = $request['is_imei'] == 'true' ? 1 : 0;
                 $Product->not_selling = $request['not_selling'] == 'true' ? 1 : 0;
@@ -421,12 +449,12 @@ class ProductsController extends BaseController
                 if ($request->hasFile('image')) {
 
                     $image = $request->file('image');
-                    $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+                    $filename = TenantStorage::safeFilename($image);
     
                     $image_resize = Image::make($image->getRealPath());
                     $image_resize->resize(200, 200);
-                    $image_resize->save(public_path('/images/products/' . $filename));
-    
+                    $image_resize->save(TenantStorage::savePath('products') . '/' . $filename);
+
                 } else {
                     $filename = 'no-image.png';
                 }
@@ -456,8 +484,8 @@ class ProductsController extends BaseController
                         $Product_variants_data[] = [
                             'product_id' => $Product->id,
                             'name'  => $variant->text,
-                            'cost'  => $variant->cost,
-                            'price' => $variant->price,
+                            'cost'  => $variant->cost ?? 0,
+                            'price' => $variant->price ?? 0,
                             'code'  => $variant->code,
                         ];
                     }
@@ -540,7 +568,9 @@ class ProductsController extends BaseController
 
         $this->authorizeForUser($request->user('api'), 'update', Product::class);
         try {
-            
+
+             $pricesOptional = $this->pricesOptional();
+
              // define validation rules for product
              $productRules = [
                 'code'         => [
@@ -559,8 +589,8 @@ class ProductsController extends BaseController
                 'tax_method'  => 'required',
                 'type'        => 'required',
                 'unit_id'     => Rule::requiredIf($request->type != 'is_service'),
-                'cost'        => Rule::requiredIf($request->type == 'is_single' || $request->type == 'is_combo'),
-                'price'       => Rule::requiredIf($request->type != 'is_variant'),
+                'cost'        => Rule::requiredIf(!$pricesOptional && ($request->type == 'is_single' || $request->type == 'is_combo')),
+                'price'       => Rule::requiredIf(!$pricesOptional && $request->type != 'is_variant'),
             ];
 
 
@@ -569,7 +599,7 @@ class ProductsController extends BaseController
             if ($request->type == 'is_variant') {
                 $productRules['variants'] = [
                     'required',
-                    function ($attribute, $value, $fail) use ($request, $id) {
+                    function ($attribute, $value, $fail) use ($request, $id, $pricesOptional) {
                         // check if array is not empty
                         if (empty($value)) {
                             $fail('The variants array is required.');
@@ -577,7 +607,7 @@ class ProductsController extends BaseController
                         }
                         // check for duplicate codes in variants array
                         $variants = $request->variants;
-                       
+
 
                         if($variants){
                             foreach ($variants as $variant) {
@@ -587,10 +617,10 @@ class ProductsController extends BaseController
                                 }else if(!array_key_exists('code', $variant) || empty($variant['code'])) {
                                     $fail('Variant code cannot be empty.');
                                     return;
-                                }else if(!array_key_exists('cost', $variant) || empty($variant['cost'])) {
+                                }else if(!$pricesOptional && (!array_key_exists('cost', $variant) || empty($variant['cost']))) {
                                     $fail('Variant cost cannot be empty.');
                                     return;
-                                }else if(!array_key_exists('price', $variant) || empty($variant['price'])) {
+                                }else if(!$pricesOptional && (!array_key_exists('price', $variant) || empty($variant['price']))) {
                                     $fail('Variant price cannot be empty.');
                                     return;
                                 }
@@ -614,6 +644,10 @@ class ProductsController extends BaseController
                             return;
                         }
 
+                        if ($pricesOptional) {
+                            // Skip price/cost emptiness checks for tenants where prices are optional.
+                            // Code uniqueness validation below still runs.
+                        } else {
                         //check if variant cost empty
                         $all_cost = array_column($variants, 'cost');
                         if($all_cost){
@@ -641,6 +675,7 @@ class ProductsController extends BaseController
                             $fail('Variant Price cannot be empty.');
                             return;
                         }
+                        } // end if (!$pricesOptional)
 
                         //check if code empty
                         $codes = array_column($variants, 'code');
@@ -662,7 +697,7 @@ class ProductsController extends BaseController
                             return;
                         }
 
-                        
+
                         // check for duplicate codes in product_variants table
                         $duplicateCodes = DB::table('product_variants')
                             ->where(function ($query) use ($id) {
@@ -737,8 +772,10 @@ class ProductsController extends BaseController
 
                  //-- check if type is_single
                  if($request['type'] == 'is_single' || $request['type'] == 'is_combo'){
-                    $Product->price = $request['price'];
-                    $Product->cost  = $request['cost'];
+                    $Product->price = $request['price'] ?: 0;
+                    $Product->cost  = $request['cost'] ?: 0;
+                    $Product->price_wholesale = $request['price_wholesale'] !== null && $request['price_wholesale'] !== '' ? $request['price_wholesale'] : null;
+                    $Product->price_retail    = $request['price_retail']    !== null && $request['price_retail']    !== '' ? $request['price_retail']    : null;
 
                     $Product->unit_id = $request['unit_id'];
                     $Product->unit_sale_id = $request['unit_sale_id'] ? $request['unit_sale_id'] : $request['unit_id'];
@@ -766,8 +803,10 @@ class ProductsController extends BaseController
 
                 //-- check if type is_service
                 }else{
-                    $Product->price = $request['price'];
+                    $Product->price = $request['price'] ?: 0;
                     $Product->cost  = 0;
+                    $Product->price_wholesale = $request['price_wholesale'] !== null && $request['price_wholesale'] !== '' ? $request['price_wholesale'] : null;
+                    $Product->price_retail    = $request['price_retail']    !== null && $request['price_retail']    !== '' ? $request['price_retail']    : null;
 
                     $Product->unit_id = NULL;
                     $Product->unit_sale_id = NULL;
@@ -778,6 +817,8 @@ class ProductsController extends BaseController
                     $manage_stock = 0;
 
                 }
+
+                $Product->expiry_date = !empty($request['expiry_date']) ? $request['expiry_date'] : null;
 
                 if ($request['type'] == 'is_combo') {
                     $materiels = json_decode($request['materiels'], true);
@@ -841,15 +882,15 @@ class ProductsController extends BaseController
                                 //-- Field Required
                                 $ProductVariantDT->product_id = $variant['product_id'];
                                 $ProductVariantDT->name = $variant['text'];
-                                $ProductVariantDT->price = $variant['price'];
-                                $ProductVariantDT->cost = $variant['cost'];
+                                $ProductVariantDT->price = $variant['price'] ?? 0;
+                                $ProductVariantDT->cost = $variant['cost'] ?? 0;
                                 $ProductVariantDT->code = $variant['code'];
 
                                 $ProductVariantUP['product_id'] = $variant['product_id'];
                                 $ProductVariantUP['code'] = $variant['code'];
                                 $ProductVariantUP['name'] = $variant['text'];
-                                $ProductVariantUP['price'] = $variant['price'];
-                                $ProductVariantUP['cost'] = $variant['cost'];
+                                $ProductVariantUP['price'] = $variant['price'] ?? 0;
+                                $ProductVariantUP['cost'] = $variant['cost'] ?? 0;
 
                             } else {
                                 $ProductVariantDT = new ProductVariant;
@@ -858,14 +899,14 @@ class ProductsController extends BaseController
                                  $ProductVariantDT->product_id = $id;
                                  $ProductVariantDT->code = $variant['code'];
                                  $ProductVariantDT->name = $variant['text'];
-                                 $ProductVariantDT->price = $variant['price'];
-                                 $ProductVariantDT->cost = $variant['cost'];
+                                 $ProductVariantDT->price = $variant['price'] ?? 0;
+                                 $ProductVariantDT->cost = $variant['cost'] ?? 0;
 
                                  $ProductVariantUP['product_id'] = $id;
                                  $ProductVariantUP['code'] = $variant['code'];
                                  $ProductVariantUP['name'] = $variant['text'];
-                                 $ProductVariantUP['price'] = $variant['price'];
-                                 $ProductVariantUP['cost'] = $variant['cost'];
+                                 $ProductVariantUP['price'] = $variant['price'] ?? 0;
+                                 $ProductVariantUP['cost'] = $variant['cost'] ?? 0;
                                  $ProductVariantUP['qty'] = 0.00;
                             }
 
@@ -906,8 +947,8 @@ class ProductsController extends BaseController
                            $ProductVarDT->product_id = $id;
                            $ProductVarDT->code = $variant['code'];
                            $ProductVarDT->name = $variant['text'];
-                           $ProductVarDT->cost = $variant['cost'];
-                           $ProductVarDT->price = $variant['price'];
+                           $ProductVarDT->cost = $variant['cost'] ?? 0;
+                           $ProductVarDT->price = $variant['price'] ?? 0;
                            $ProductVarDT->save();
 
 
@@ -962,27 +1003,27 @@ class ProductsController extends BaseController
                 $currentImage = $Product->image;
                 if ($currentImage && $request->image != $currentImage) {
                     $image = $request->file('image');
-                    $path = public_path() . '/images/products';
-                    $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+                    $path = TenantStorage::savePath('products');
+                    $filename = TenantStorage::safeFilename($image);
 
                     $image_resize = Image::make($image->getRealPath());
                     $image_resize->resize(200, 200);
-                    $image_resize->save(public_path('/images/products/' . $filename));
+                    $image_resize->save($path . '/' . $filename);
 
-                    $BrandImage = $path . '/' . $currentImage;
-                    if (file_exists($BrandImage)) {
-                        if ($currentImage != 'no-image.png') {
-                            @unlink($BrandImage);
+                    if (!TenantStorage::isDefaultImage($currentImage)) {
+                        $oldImage = TenantStorage::resolveFilePath('products', $currentImage);
+                        if (file_exists($oldImage)) {
+                            @unlink($oldImage);
                         }
                     }
                 } else if (!$currentImage && $request->image !='null'){
                     $image = $request->file('image');
-                    $path = public_path() . '/images/products';
-                    $filename = rand(11111111, 99999999) . $image->getClientOriginalName();
+                    $path = TenantStorage::savePath('products');
+                    $filename = TenantStorage::safeFilename($image);
 
                     $image_resize = Image::make($image->getRealPath());
                     $image_resize->resize(200, 200);
-                    $image_resize->save(public_path('/images/products/' . $filename));
+                    $image_resize->save($path . '/' . $filename);
                 }
 
                 else {
@@ -1018,9 +1059,9 @@ class ProductsController extends BaseController
             $Product = Product::findOrFail($id);
             
 
-            $pathIMG = public_path() . '/images/products/' . $Product->image;
-            if (file_exists($pathIMG)) {
-                if ($Product->image != 'no-image.png') {
+            if (!TenantStorage::isDefaultImage($Product->image)) {
+                $pathIMG = TenantStorage::resolveFilePath('products', $Product->image);
+                if (file_exists($pathIMG)) {
                     @unlink($pathIMG);
                 }
             }
@@ -1055,13 +1096,13 @@ class ProductsController extends BaseController
                 $Product = Product::findOrFail($product_id);
                 $Product->deleted_at = Carbon::now();
                 
-                $pathIMG = public_path() . '/images/products/' . $Product->image;
-                if (file_exists($pathIMG)) {
-                    if ($Product->image != 'no-image.png') {
+                if (!TenantStorage::isDefaultImage($Product->image)) {
+                    $pathIMG = TenantStorage::resolveFilePath('products', $Product->image);
+                    if (file_exists($pathIMG)) {
                         @unlink($pathIMG);
                     }
                 }
-                
+
                 $Product->save();
                 
                 product_warehouse::where('product_id', $product_id)->update([
@@ -1270,6 +1311,10 @@ class ProductsController extends BaseController
                 $product_price =  $product_warehouse['product']->price;
             }
 
+            // Wholesale / retail prices (fall back to parent product for variants).
+            $item['price_wholesale'] = $product_warehouse['product']->price_wholesale;
+            $item['price_retail']    = $product_warehouse['product']->price_retail;
+
             $item['id'] = $product_warehouse->product_id;
             $item['product_type'] = $product_warehouse['product']->type;
             $item['Type_barcode'] = $product_warehouse['product']->Type_barcode;
@@ -1393,6 +1438,11 @@ class ProductsController extends BaseController
             $item['code'] = $Product_data['code'];
             $item['name'] = $Product_data['name'];
         }
+
+        // Wholesale / retail prices for client-type-based pricing.
+        // For variants, fall back to the parent product's wholesale/retail price.
+        $item['price_wholesale'] = $Product_data['price_wholesale'];
+        $item['price_retail']    = $Product_data['price_retail'];
 
        
         //check if product has Unit sale
@@ -1677,6 +1727,11 @@ class ProductsController extends BaseController
         $item['tax_method'] = $Product->tax_method;
         $item['price'] = $Product->price;
         $item['cost'] = $Product->cost;
+        // Backfill retail from legacy `price` if not set yet, so existing products are editable
+        // without forcing the user to retype the value.
+        $item['price_wholesale'] = $Product->price_wholesale;
+        $item['price_retail']    = $Product->price_retail !== null ? $Product->price_retail : $Product->price;
+        $item['expiry_date']     = $Product->expiry_date ? $Product->expiry_date->format('Y-m-d') : null;
         $item['stock_alert'] = $Product->stock_alert;
         $item['TaxNet'] = $Product->TaxNet;
         $item['note'] = $Product->note ? $Product->note : '';
@@ -1737,161 +1792,211 @@ class ProductsController extends BaseController
     // import Products
     public function import_products(Request $request)
     {
-        ini_set('max_execution_time', 600); //600 seconds = 10 minutes 
-       
+        ini_set('max_execution_time', 600); //600 seconds = 10 minutes
+
         $file = $request->file('products');
-        $ext = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
-        if ($ext != 'csv') {
+        $ext = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+
+        if (!in_array($ext, ['csv', 'xlsx', 'xls'])) {
             return response()->json([
-                'msg' => 'must be in csv format',
+                'msg' => 'must be in csv, xlsx or xls format',
                 'status' => false,
             ]);
-        } else {
-            // Read the CSV file
-            $data = [];
-            $rowcount = 0;
-            if (($handle = fopen($file->getPathname(), "r")) !== false) {
-                $max_line_length = defined('MAX_LINE_LENGTH') ? MAX_LINE_LENGTH : 10000;
-                $header = fgetcsv($handle, $max_line_length, ';'); // Use semicolon as the delimiter
+        }
 
-                // Process the header row
-                $escapedHeader = [];
-                foreach ($header as $key => $value) {
-                    $lheader = strtolower($value);
-                    $escapedItem = preg_replace('/[^a-z]/', '', $lheader);
-                    $escapedHeader[] = $escapedItem;
-                }
+        // Read rows depending on file type
+        $data = [];
 
-                $header_colcount = count($header);
-                while (($row = fgetcsv($handle, $max_line_length, ';')) !== false) { // Use semicolon as the delimiter
-                    $row_colcount = count($row);
-                    if ($row_colcount == $header_colcount) {
-                        $entry = array_combine($escapedHeader, $row);
-                        $data[] = $entry;
-                    } else {
-                        return null;
-                    }
-                    $rowcount++;
-                }
-                fclose($handle);
-            } else {
+        if ($ext === 'csv') {
+            // CSV parsing (semicolon-separated, kept for backward compatibility)
+            if (($handle = fopen($file->getPathname(), "r")) === false) {
                 return null;
             }
 
+            $max_line_length = defined('MAX_LINE_LENGTH') ? MAX_LINE_LENGTH : 10000;
+            $header = fgetcsv($handle, $max_line_length, ';');
 
-            $warehouses = Warehouse::where('deleted_at', null)->pluck('id')->toArray();
+            $escapedHeader = [];
+            foreach ($header as $value) {
+                $lheader = strtolower($value);
+                $escapedHeader[] = preg_replace('/[^a-z]/', '', $lheader);
+            }
 
-              // Create a new instance of Illuminate\Http\Request and pass the imported data to it.
-
-            $cleanedData = [];
-
-            foreach ($data as $row) {
-                $cleanedRow = [];
-                foreach ($row as $key => $value) {
-                    $cleanedKey = trim($key);
-                    $cleanedRow[$cleanedKey] = $value;
+            $header_colcount = count($header);
+            while (($row = fgetcsv($handle, $max_line_length, ';')) !== false) {
+                if (count($row) == $header_colcount) {
+                    $data[] = array_combine($escapedHeader, $row);
+                } else {
+                    return null;
                 }
-                $cleanedData[] = $cleanedRow;
             }
+            fclose($handle);
+        } else {
+            // XLSX / XLS parsing via Maatwebsite\Excel (Laravel-Excel)
+            $rows = Excel::toArray([], $file);
 
-            $rules = [];
-            foreach ($cleanedData as $index => $row) {
-                $rules[$index . '.name'] = 'required';
-                $rules[$index . '.code'] = [
-                    'required',
-                    Rule::unique('products', 'code')->where(function ($query) {
-                        return $query->where('deleted_at', '=', null);
-                    }),
-                ];
-            }
-
-            $validator = validator()->make($cleanedData, $rules);
-        
-            if ($validator->fails()) {
-                // Validation failed
+            if (empty($rows) || empty($rows[0])) {
                 return response()->json([
-                    'msg' => 'Validation failed',
-                    'errors' => $validator->errors(),
+                    'msg' => 'Empty file',
                     'status' => false,
                 ]);
             }
-           
-            try {
-                \DB::transaction(function () use ($cleanedData , $warehouses) {
 
+            $sheet = $rows[0];
+            $header = array_shift($sheet);
 
-                    //-- Create New Product
-                    foreach ($cleanedData as $key => $value) {
+            $escapedHeader = [];
+            foreach ($header as $value) {
+                $lheader = strtolower((string) $value);
+                $escapedHeader[] = preg_replace('/[^a-z]/', '', $lheader);
+            }
 
-                        $category = Category::where('deleted_at', null)->firstOrCreate(['name' => $value['category']]);
-                        $category_id = $category->id;
+            foreach ($sheet as $row) {
+                // skip blank rows
+                $isEmpty = true;
+                foreach ($row as $cell) {
+                    if ($cell !== null && $cell !== '') { $isEmpty = false; break; }
+                }
+                if ($isEmpty) continue;
 
-                        $unit = Unit::where(['ShortName' => $value['unit']])
-                            ->orWhere(['name' => $value['unit']])
-                            ->where('deleted_at', null)->first();
-                        $unit_id = $unit->id;
+                // Pad / trim to match header column count
+                $row = array_pad($row, count($escapedHeader), null);
+                $row = array_slice($row, 0, count($escapedHeader));
 
-                        if ($value['brand'] != 'N/A' && $value['brand'] != '') {
-                            $brand = Brand::where('deleted_at', null)->firstOrCreate(['name' => $value['brand']]);
-                            $brand_id = $brand->id;
+                $data[] = array_combine($escapedHeader, $row);
+            }
+        }
+
+        $warehouses = Warehouse::where('deleted_at', null)->pluck('id')->toArray();
+
+        // Normalize keys
+        $cleanedData = [];
+        foreach ($data as $row) {
+            $cleanedRow = [];
+            foreach ($row as $key => $value) {
+                $cleanedRow[trim($key)] = is_string($value) ? trim($value) : $value;
+            }
+            $cleanedData[] = $cleanedRow;
+        }
+
+        $rules = [];
+        foreach ($cleanedData as $index => $row) {
+            $rules[$index . '.name'] = 'required';
+            $rules[$index . '.code'] = [
+                'required',
+                Rule::unique('products', 'code')->where(function ($query) {
+                    return $query->where('deleted_at', '=', null);
+                }),
+            ];
+        }
+
+        $validator = validator()->make($cleanedData, $rules);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'msg' => 'Validation failed',
+                'errors' => $validator->errors(),
+                'status' => false,
+            ]);
+        }
+
+        try {
+            \DB::transaction(function () use ($cleanedData, $warehouses) {
+
+                foreach ($cleanedData as $value) {
+
+                    $category = Category::where('deleted_at', null)->firstOrCreate(['name' => $value['category']]);
+                    $category_id = $category->id;
+
+                    $unit = Unit::where(['ShortName' => $value['unit']])
+                        ->orWhere(['name' => $value['unit']])
+                        ->where('deleted_at', null)->first();
+                    $unit_id = $unit->id;
+
+                    if (!empty($value['brand']) && $value['brand'] != 'N/A') {
+                        $brand = Brand::where('deleted_at', null)->firstOrCreate(['name' => $value['brand']]);
+                        $brand_id = $brand->id;
+                    } else {
+                        $brand_id = NULL;
+                    }
+
+                    // Parse optional new columns
+                    $priceWholesale = isset($value['pricewholesale']) && $value['pricewholesale'] !== '' && $value['pricewholesale'] !== null
+                        ? str_replace(",", "", $value['pricewholesale'])
+                        : null;
+                    $priceRetail = isset($value['priceretail']) && $value['priceretail'] !== '' && $value['priceretail'] !== null
+                        ? str_replace(",", "", $value['priceretail'])
+                        : null;
+
+                    // Expiry date (accept ISO date or Excel serial)
+                    $expiryDate = null;
+                    if (isset($value['expirydate']) && $value['expirydate'] !== '' && $value['expirydate'] !== null) {
+                        $raw = $value['expirydate'];
+                        if (is_numeric($raw)) {
+                            // Excel serial date number
+                            try {
+                                $expiryDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $raw)->format('Y-m-d');
+                            } catch (\Throwable $e) {
+                                $expiryDate = null;
+                            }
                         } else {
-                            $brand_id = NULL;
-                        }
-
-                      
-                        $Product = new Product;
-                        $Product->name = htmlspecialchars(trim($value['name']));;
-                        $Product->code = $this->check_code_exist($value['code']);
-                        $Product->Type_barcode = 'CODE128';
-                        $Product->type = 'is_single';
-                        $Product->price = str_replace(",","",$value['price']);
-                        $Product->cost = str_replace(",","",$value['cost']);
-                        $Product->category_id = $category_id;
-                        $Product->brand_id = $brand_id;
-                        $Product->TaxNet = 0;
-                        $Product->tax_method = 1;
-                        $Product->note = $value['note'] ? $value['note'] : '';
-                        $Product->unit_id = $unit_id;
-                        $Product->unit_sale_id = $unit_id;
-                        $Product->unit_purchase_id = $unit_id;
-                        $Product->stock_alert = $value['stockalert'] ? $value['stockalert'] : 0;
-                        $Product->is_variant = 0;
-                        $Product->image = 'no-image.png';
-                        $Product->save();
-
-                        if ($warehouses) {
-                            foreach ($warehouses as $warehouse) {
-                                $product_warehouse = new product_warehouse;
-                                $product_warehouse->product_id = $Product->id;
-                                $product_warehouse->warehouse_id = $warehouse;
-                                $product_warehouse->manage_stock = 1;
-                                $product_warehouse->save();
-
+                            try {
+                                $expiryDate = Carbon::parse($raw)->format('Y-m-d');
+                            } catch (\Throwable $e) {
+                                $expiryDate = null;
                             }
                         }
                     }
 
+                    // Initial stock (applied to every warehouse, like in Add_product)
+                    $initialStock = isset($value['initialstock']) && $value['initialstock'] !== '' && $value['initialstock'] !== null
+                        ? (float) str_replace(",", "", $value['initialstock'])
+                        : 0;
 
-                }, 10);
+                    $Product = new Product;
+                    $Product->name = htmlspecialchars(trim($value['name']));
+                    $Product->code = $this->check_code_exist($value['code']);
+                    $Product->Type_barcode = 'CODE128';
+                    $Product->type = 'is_single';
+                    $Product->price = str_replace(",", "", $value['price']);
+                    $Product->cost = str_replace(",", "", $value['cost']);
+                    $Product->price_wholesale = $priceWholesale;
+                    $Product->price_retail    = $priceRetail;
+                    $Product->expiry_date     = $expiryDate;
+                    $Product->category_id = $category_id;
+                    $Product->brand_id = $brand_id;
+                    $Product->TaxNet = 0;
+                    $Product->tax_method = 1;
+                    $Product->note = !empty($value['note']) ? $value['note'] : '';
+                    $Product->unit_id = $unit_id;
+                    $Product->unit_sale_id = $unit_id;
+                    $Product->unit_purchase_id = $unit_id;
+                    $Product->stock_alert = !empty($value['stockalert']) ? $value['stockalert'] : 0;
+                    $Product->is_variant = 0;
+                    $Product->image = 'no-image.png';
+                    $Product->save();
 
-                // Return success response
-                return response()->json(['status' => true]);
+                    if ($warehouses) {
+                        foreach ($warehouses as $warehouse) {
+                            $product_warehouse = new product_warehouse;
+                            $product_warehouse->product_id = $Product->id;
+                            $product_warehouse->warehouse_id = $warehouse;
+                            $product_warehouse->manage_stock = 1;
+                            $product_warehouse->qte = $initialStock;
+                            $product_warehouse->save();
+                        }
+                    }
+                }
 
-            } catch (QueryException $e) {
-                // Transaction failed, handle the exception
-                $errorCode = $e->getCode();
-                $errorMessage = $e->getMessage();
-                
-                // Additional error handling or logging can be performed here
-                
-                return response()->json(['status' => false, 'error' => $errorMessage]);
-            }
-            
+
+            }, 10);
+
+            // Return success response
+            return response()->json(['status' => true]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json(['status' => false, 'error' => $e->getMessage()]);
         }
-
-
-    
-
     }
 
     // Generate_random_code
@@ -2034,13 +2139,8 @@ class ProductsController extends BaseController
         $stockExport = new StockExport($stock);
 
         $excelFileName = 'stock_export_' . now()->format('YmdHis') . '.xlsx';
-        $excelFolderPath = public_path() . '/images/count_stock/';
-        $excelFilePath = $excelFolderPath . $excelFileName;
-        
-        // Check if the directory exists, if not, create it
-        if (!File::exists($excelFolderPath)) {
-            File::makeDirectory($excelFolderPath, 0755, true, true);
-        }
+        $excelFolderPath = TenantStorage::savePath('count_stock');
+        $excelFilePath = $excelFolderPath . '/' . $excelFileName;
         
         // Use File::put to store the file directly in the desired public directory
         File::put($excelFilePath, Excel::raw($stockExport, \Maatwebsite\Excel\Excel::XLSX));

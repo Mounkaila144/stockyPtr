@@ -12,11 +12,11 @@
         class="footer-bottom border-top pt-3 d-flex flex-column flex-sm-row align-items-center"
       >
         <div class="d-flex align-items-center">
-          <img class="logo" :src="'/images/'+currentUser.logo" alt width="60" height="60">
+          <img class="logo" src="/logow.png" alt="Wuroobiz" style="max-height:40px; width:auto;">
           <div>
             <div>
               <p class="m-0">&copy; {{ new Date().getFullYear() }} {{$t('developed_by')}} {{currentUser.developed_by}}</p>
-              <p class="m-0">All rights reserved - v5.0</p>
+              <p class="m-0">Faites par <a href="https://ptrniger.com" target="_blank" rel="noopener">PTR Niger</a>.</p>
             </div>
           </div>
           <span class="flex-grow-1"></span>

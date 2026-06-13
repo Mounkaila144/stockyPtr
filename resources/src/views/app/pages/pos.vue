@@ -9,7 +9,7 @@
             <div class="main-header">
               <div class="logo">
                 <router-link to="/app/dashboard">
-                  <img :src="'/images/'+currentUser.logo" alt width="60" height="60">
+                  <img src="/logow.png" alt="Wuroobiz" style="max-height:50px; width:auto;">
                 </router-link>
               </div>
               <div class="mx-auto"></div>
@@ -26,7 +26,7 @@
             
                  <!-- Full screen toggle -->
                  <i
-                  style="color: #8b5cf6;"
+                  style="color: #2596be;"
                   title="Full screen"
                   class="i-Full-Screen header-icon d-none d-sm-inline-block"
                   @click="handleFullScreen"
@@ -45,7 +45,7 @@
                 <!-- Today's Sales -->
                 <i
                  @click="get_today_sales()"
-                  style="color: #8b5cf6;"
+                  style="color: #2596be;"
                   title="Today's Sales"
                   v-if="currentUserPermissions && currentUserPermissions.includes('Sales_view')"
                   class="i-Receipt header-icon d-sm-inline-block"
@@ -64,7 +64,7 @@
                   >
                     <template slot="button-content">
                       <i
-                        style="color: #8b5cf6!important;"
+                        style="color: #2596be!important;"
                         class="i-Globe text-muted header-icon"
                         role="button"
                         id="dropdownMenuButton"
@@ -81,7 +81,7 @@
                     <div class="menu-icon-grid">
                       <a v-for="lang in languages_available" :key="lang.locale" @click="SetLocal(lang.locale)">
                         <img
-                          :src="`/flags/${lang.flag}`"
+                          :src="flagPath(lang.flag)"
                           :alt="lang.name"
                           class="flag-icon flag-icon-squared"
                           style="width: 20px; margin-right: 8px"
@@ -107,7 +107,7 @@
                   >
                     <template slot="button-content">
                       <img
-                        :src="'/images/avatar/'+currentUser.avatar"
+                        :src="imagePath('avatar', currentUser.avatar)"
                         id="userDropdown"
                         alt
                         data-toggle="dropdown"
@@ -172,6 +172,21 @@
                       </validation-provider>
                     </b-col>
 
+                    <!-- Client Type -->
+                    <b-col lg="12" md="12" sm="12" class="mt-2">
+                      <v-select
+                        v-model="current_client_type"
+                        @input="Reprice_Cart_For_Client"
+                        :reduce="opt => opt.value"
+                        placeholder="Type de client"
+                        class="w-100"
+                        :options="[
+                          {label: 'Client (détail)', value: 'retail'},
+                          {label: 'Revendeur (gros)', value: 'wholesale'}
+                        ]"
+                      />
+                    </b-col>
+
                     <!-- warehouse -->
                     <b-col lg="12" md="12" sm="12">
                       <validation-provider name="warehouse" :rules="{ required: true}">
@@ -200,6 +215,7 @@
                                 <th scope="col">{{$t('ProductName')}}</th>
                                 <th scope="col">{{$t('Price')}}</th>
                                 <th scope="col" class="text-center">{{$t('Qty')}}</th>
+                                <th scope="col" class="text-center">{{$t('Discount')}} %</th>
                                 <th scope="col" class="text-center">{{$t('SubTotal')}}</th>
                                 <th scope="col" class="text-center">
                                   <i class="fa fa-trash"></i>
@@ -208,14 +224,14 @@
                             </thead>
                             <tbody>
                               <tr v-if="details.length <= 0">
-                                <td colspan="5">{{$t('NodataAvailable')}}</td>
+                                <td colspan="6">{{$t('NodataAvailable')}}</td>
                               </tr>
                               <tr v-for="(detail, index) in details" :key="index">
                                 <td>
                                   <span>{{detail.code}}</span>
                                   <br>
                                   <span class="badge badge-success">{{detail.name}}</span>
-                                  <i v-if="currentUserPermissions && currentUserPermissions.includes('edit_product_sale')" 
+                                  <i v-if="currentUserPermissions && currentUserPermissions.includes('edit_product_sale')"
                                     @click="Modal_Updat_Detail(detail)" class="i-Edit text-success cursor-pointer"></i>
                                 </td>
                                 <td>{{currentUser.currency}} {{formatNumber(detail.Total_price, 2)}}</td>
@@ -243,6 +259,19 @@
                                       </b-input-group-append>
                                     </b-input-group>
                                   </div>
+                                </td>
+                                <td class="text-center" style="min-width:110px">
+                                  <b-input-group append="%" size="sm">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="0.01"
+                                      class="form-control text-right"
+                                      v-model.number="detail.discount_percent"
+                                      @input="Apply_Line_Discount(detail.detail_id)"
+                                    >
+                                  </b-input-group>
                                 </td>
                                  <td class="text-center">{{currentUser.currency}} {{detail.subtotal.toFixed(2)}}</td>
                                 <td>
@@ -566,7 +595,7 @@
                   class="card o-hidden bd-highlight m-1"
                 >
                   <div class="list-thumb d-flex">
-                    <img alt :src="'/images/products/'+product.image">
+                    <img alt :src="imagePath('products', product.image)">
                   </div>
                   <div class="flex-grow-1 d-bock">
                     <div
@@ -690,7 +719,7 @@
                   class="card o-hidden bd-highlight m-1"
                 >
                   <div class="list-thumb d-flex">
-                    <img alt :src="'/images/no-image.png'">
+                    <img alt :src="imagePath('', 'no-image.png')">
                   </div>
                   <div class="flex-grow-1 d-bock">
                     <div
@@ -707,7 +736,7 @@
                   @click="Products_by_Brands(brand.id)"
                   :class="{ 'brand-Active' : brand.id === brand_id}"
                 >
-                  <img alt :src="'/images/brands/'+brand.image">
+                  <img alt :src="imagePath('brands', brand.image)">
                   <div class="flex-grow-1 d-bock">
                     <div
                       class="card-body align-self-center d-flex flex-column justify-content-between align-items-lg-center"
@@ -821,12 +850,12 @@
         </b-sidebar>
 
         <!-- Modal Show Invoice POS-->
-        <b-modal hide-footer size="sm" scrollable id="Show_invoice" :title="$t('Invoice_POS')">
+        <b-modal hide-footer size="sm" scrollable id="Show_invoice" :title="$t('Invoice_POS')" @hidden="Reset_Pos">
           <div id="invoice-POS">
             <div style="max-width:400px;margin:0px auto">
               <div class="info">
                 <div class="invoice_logo text-center mb-2">
-                  <img :src="'/images/'+invoice_pos.setting.logo" alt width="60" height="60">
+                  <img :src="imagePath('', invoice_pos.setting.logo)" alt width="60" height="60">
                 </div>
                 <p>
                   <span>{{$t('date')}} : {{invoice_pos.sale.date}} <br></span>
@@ -1592,6 +1621,7 @@ export default {
         TaxNet: 0,
         notes:'',
       },
+      current_client_type: 'retail',
       client: {
         id: "",
         name: "",
@@ -1614,6 +1644,7 @@ export default {
         quantity: "",
         check_qty: "",
         discount: "",
+        discount_percent: 0,
         DiscountNet: "",
         discount_Method: "",
         sale_unit_id: "",
@@ -2328,7 +2359,53 @@ export default {
     onClientSelected(selectedClient) {
       this.client_name = '';
       const client = this.clients.find(client => client.id === selectedClient);
-      this.client_name = client.name;
+      this.client_name = client ? client.name : '';
+      this.current_client_type = client && client.client_type ? client.client_type : 'retail';
+
+      // Re-apply price selection to every line already in the cart
+      this.Reprice_Cart_For_Client();
+    },
+
+    //----------- Pick the right price for the current client type
+    //  - wholesale (revendeur) -> price_wholesale (falls back to base price)
+    //  - retail   (client)     -> price_retail    (falls back to base price)
+    Pick_Price_For_Client(productData) {
+      const type = this.current_client_type || 'retail';
+      let chosen = null;
+      if (type === 'wholesale') {
+        chosen = productData.price_wholesale;
+      } else {
+        chosen = productData.price_retail;
+      }
+      if (chosen === null || chosen === undefined || chosen === '' || isNaN(parseFloat(chosen))) {
+        // No specific price set, fall back to the legacy/base price
+        chosen = productData.fix_price !== undefined ? productData.fix_price : productData.Unit_price;
+      }
+      return parseFloat(chosen);
+    },
+
+    //----------- Re-apply price for every line already in the cart when client changes
+    Reprice_Cart_For_Client() {
+      for (var i = 0; i < this.details.length; i++) {
+        var newUnit = this.Pick_Price_For_Client(this.details[i]);
+        if (!isNaN(newUnit)) {
+          this.details[i].Unit_price = newUnit;
+          // Reapply current discount % (or 0) on the new price
+          var pct = parseFloat(this.details[i].discount_percent) || 0;
+          this.details[i].DiscountNet = parseFloat((newUnit * pct) / 100);
+          if (this.details[i].tax_method == "1") {
+            this.details[i].Net_price = parseFloat(newUnit - this.details[i].DiscountNet);
+            this.details[i].taxe = parseFloat((this.details[i].tax_percent * (newUnit - this.details[i].DiscountNet)) / 100);
+            this.details[i].Total_price = parseFloat(this.details[i].Net_price + this.details[i].taxe);
+          } else {
+            this.details[i].taxe = parseFloat((newUnit - this.details[i].DiscountNet) * (this.details[i].tax_percent / 100));
+            this.details[i].Net_price = parseFloat(newUnit - this.details[i].taxe - this.details[i].DiscountNet);
+            this.details[i].Total_price = parseFloat(this.details[i].Net_price + this.details[i].taxe);
+          }
+        }
+      }
+      this.CaclulTotal();
+      this.$forceUpdate();
     },
 
 
@@ -2457,11 +2534,16 @@ export default {
           if (this.details[i].discount_Method == "2") {
             //Fixed
             this.details[i].DiscountNet = this.details[i].discount;
+            // Reflect into the per-line percent input as well
+            this.details[i].discount_percent = this.details[i].Unit_price > 0
+              ? parseFloat(((this.details[i].DiscountNet / this.details[i].Unit_price) * 100).toFixed(2))
+              : 0;
           } else {
             //Percentage %
             this.details[i].DiscountNet = parseFloat(
               (this.details[i].Unit_price * this.details[i].discount) / 100
             );
+            this.details[i].discount_percent = parseFloat(this.details[i].discount) || 0;
           }
           if (this.details[i].tax_method == "1") {
             //Exclusive
@@ -2533,20 +2615,34 @@ export default {
     },
     //------------------------------ Print -------------------------\\
     print_pos() {
-      var divContents = document.getElementById("invoice-POS").innerHTML;
-      var a = window.open("", "", "height=500, width=500");
-      a.document.write(
-        '<link rel="stylesheet" href="/css/pos_print.css"><html>'
-      );
-      a.document.write("<body >");
-      a.document.write(divContents);
-      a.document.write("</body></html>");
-      a.document.close();
+      var divContents = document.getElementById("invoice-POS");
+      if (!divContents) return;
+      divContents = divContents.innerHTML;
 
+      // Use a hidden iframe instead of window.open to avoid cross-window blocking
+      var iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-10000px';
+      iframe.style.left = '-10000px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      document.body.appendChild(iframe);
+
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write('<html><head>');
+      doc.write('<link rel="stylesheet" href="/css/pos_print.css">');
+      doc.write('</head><body>');
+      doc.write(divContents);
+      doc.write('</body></html>');
+      doc.close();
+
+      // Wait for CSS to load, then print and remove iframe
       setTimeout(() => {
-         a.print();
-      }, 1000);
-
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        document.body.removeChild(iframe);
+      }, 500);
     },
     //-------------------------------- Invoice POS ------------------------------\\
     Invoice_POS(id) {
@@ -2559,19 +2655,21 @@ export default {
           this.invoice_pos = response.data;
           this.payments = response.data.payments;
           this.pos_settings = response.data.pos_settings;
-          setTimeout(() => {
-            // Complete the animation of the  progress bar.
-            NProgress.done();
-            this.$bvModal.show("Show_invoice");
-          }, 500);
 
+          // Show invoice modal first
+          NProgress.done();
+          this.$bvModal.show("Show_invoice");
+
+          // Auto-print after modal is fully rendered
           if(response.data.pos_settings.is_printable){
-            setTimeout(() => this.print_pos(), 1000);
+            this.$nextTick(() => {
+              setTimeout(() => this.print_pos(), 500);
+            });
           }
         })
         .catch(() => {
           // Complete the animation of the  progress bar.
-          setTimeout(() => NProgress.done(), 500);
+          NProgress.done();
         });
     },
     //----------------------------------Process Payment ------------------------------\\
@@ -2614,9 +2712,9 @@ export default {
             if (response.data.success === true) {
               // Complete the animation of theprogress bar.
               NProgress.done();
-              this.Invoice_POS(response.data.id);
               this.$bvModal.hide("Add_Payment");
-              this.Reset_Pos();
+              this.Invoice_POS(response.data.id);
+              // Reset_Pos will be called when Show_invoice modal is closed
             }
           })
           .catch(error => {
@@ -2690,9 +2788,9 @@ export default {
               // Complete the animation of theprogress bar.
               NProgress.done();
               this.paymentProcessing = false;
-              this.Invoice_POS(response.data.id);
               this.$bvModal.hide("Add_Payment");
-              this.Reset_Pos();
+              this.Invoice_POS(response.data.id);
+              // Reset_Pos will be called when Show_invoice modal is closed
             }
           })
           .catch(error => {
@@ -2722,6 +2820,7 @@ export default {
     Get_Product_Details(product_id, variant_id) {
        axios.get("/show_product_data/" + product_id +"/"+ variant_id).then(response => {
         this.product.discount           = 0;
+        this.product.discount_percent   = 0;
         this.product.DiscountNet        = 0;
         this.product.discount_Method    = "2";
         this.product.product_id         = response.data.id;
@@ -2737,9 +2836,27 @@ export default {
         this.product.product_variant_id = variant_id;
         this.product.code               = response.data.code;
         this.product.fix_price          = response.data.fix_price;
+        this.product.price_wholesale    = response.data.price_wholesale;
+        this.product.price_retail       = response.data.price_retail;
         this.product.sale_unit_id       = response.data.sale_unit_id;
         this.product.is_imei            = response.data.is_imei;
         this.product.imei_number        = '';
+
+        // Override the unit price with the wholesale/retail price for the selected client type
+        var clientUnit = this.Pick_Price_For_Client(this.product);
+        if (!isNaN(clientUnit)) {
+          this.product.Unit_price = clientUnit;
+          // Recompute Net/Total based on existing tax info
+          if (this.product.tax_method == "1") {
+            this.product.Net_price   = clientUnit;
+            this.product.taxe        = parseFloat((this.product.tax_percent * clientUnit) / 100);
+            this.product.Total_price = parseFloat(this.product.Net_price + this.product.taxe);
+          } else {
+            this.product.taxe        = parseFloat(clientUnit * (this.product.tax_percent / 100));
+            this.product.Net_price   = parseFloat(clientUnit - this.product.taxe);
+            this.product.Total_price = clientUnit;
+          }
+        }
 
         this.add_product(response.data.code);
         this.CaclulTotal();
@@ -2747,6 +2864,57 @@ export default {
         NProgress.done();
       });
     },
+    //----------- Apply per-line percentage discount (POS quick discount)
+    Apply_Line_Discount(detail_id) {
+      for (var i = 0; i < this.details.length; i++) {
+        if (this.details[i].detail_id !== detail_id) continue;
+
+        var pct = parseFloat(this.details[i].discount_percent);
+        if (isNaN(pct) || pct < 0) pct = 0;
+        if (pct > 100) pct = 100;
+
+        this.details[i].discount_percent = pct;
+        // Mirror values into the underlying discount fields (Percent method = "1")
+        this.details[i].discount_Method = "1";
+        this.details[i].discount = pct;
+        this.details[i].DiscountNet = parseFloat(
+          (this.details[i].Unit_price * pct) / 100
+        );
+
+        if (this.details[i].tax_method == "1") {
+          // Exclusive
+          this.details[i].Net_price = parseFloat(
+            this.details[i].Unit_price - this.details[i].DiscountNet
+          );
+          this.details[i].taxe = parseFloat(
+            (this.details[i].tax_percent *
+              (this.details[i].Unit_price - this.details[i].DiscountNet)) /
+              100
+          );
+          this.details[i].Total_price = parseFloat(
+            this.details[i].Net_price + this.details[i].taxe
+          );
+        } else {
+          // Inclusive
+          this.details[i].taxe = parseFloat(
+            (this.details[i].Unit_price - this.details[i].DiscountNet) *
+              (this.details[i].tax_percent / 100)
+          );
+          this.details[i].Net_price = parseFloat(
+            this.details[i].Unit_price -
+              this.details[i].taxe -
+              this.details[i].DiscountNet
+          );
+          this.details[i].Total_price = parseFloat(
+            this.details[i].Net_price + this.details[i].taxe
+          );
+        }
+        break;
+      }
+      this.CaclulTotal();
+      this.$forceUpdate();
+    },
+
     //----------- Calcul Total
     CaclulTotal() {
       this.total = 0;

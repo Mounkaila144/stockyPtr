@@ -34,7 +34,7 @@ export default {
 
       // ✅ Also update backend
        try {
-         await axios.post(`/languages_setting/set-default/${selected}`);
+         await axios.post(`languages_setting/set-default/${selected}`);
           } catch (error) {
             console.warn('Failed to sync default language to backend:', error);
           }
